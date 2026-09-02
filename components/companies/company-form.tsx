@@ -25,7 +25,7 @@ const asInput = (value: string | null) => value ?? "";
 
 export function CompanyForm({ record, initialValues, busy, serverError, locked, mutationsDisabled, onSubmit, onDelete, onDraftChange, onClose }: Props) {
   const errorRef = useRef<HTMLDivElement>(null);
-  const drawerRef = useRef<HTMLElement>(null);
+  const drawerRef = useRef<HTMLDialogElement>(null);
   const [deleteMode, setDeleteMode] = useState(false);
   const [confirmationName, setConfirmationName] = useState("");
   type FormInput = z.input<typeof companyInputSchema>;
@@ -67,8 +67,8 @@ export function CompanyForm({ record, initialValues, busy, serverError, locked, 
   };
   const techRoles = watch("techRoles");
   const programTypes = watch("programTypes");
-  return <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) attemptClose(); }}>
-    <aside ref={drawerRef} className="company-drawer" role="dialog" aria-modal="true" aria-labelledby="company-form-title">
+  return <div className="drawer-backdrop" role="presentation" onKeyDown={(event) => { if (event.key === "Escape") attemptClose(); }} onMouseDown={(event) => { if (event.target === event.currentTarget) attemptClose(); }}>
+    <dialog open ref={drawerRef} className="company-drawer" aria-labelledby="company-form-title">
       <header className="drawer-header"><div><p className="eyebrow">EXCEL RECORD</p><h2 id="company-form-title">{record ? `แก้ไข ${record.companyName}` : "เพิ่มบริษัทใหม่"}</h2></div><button className="icon-button" onClick={attemptClose} aria-label="ปิด"><X size={19} /></button></header>
       <form onSubmit={(event) => { if (record && !isDirty) { event.preventDefault(); onClose(); return; } void handleSubmit(onSubmit)(event); }} className="drawer-form">
         <div className="drawer-scroll">
@@ -106,6 +106,6 @@ export function CompanyForm({ record, initialValues, busy, serverError, locked, 
         </div>
         <footer className="drawer-footer"><button type="button" className="secondary-button" onClick={attemptClose}>ยกเลิก</button><button type="submit" className="primary-button" disabled={busy || mutationsDisabled}><Save size={17} />{busy ? "กำลังบันทึก…" : locked ? "ลองบันทึกอีกครั้ง" : "บันทึกลง Excel"}</button></footer>
       </form>
-    </aside>
+    </dialog>
   </div>;
 }

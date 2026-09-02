@@ -9,7 +9,7 @@
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
-    "lint": "oxlint app lib types tests --quiet",
+    "lint": "oxlint app components/companies components/dashboard components/providers components/sync hooks/use-companies.ts hooks/use-debounced-value.ts hooks/use-excel-events.ts lib scripts tests types --quiet",
     "format": "oxfmt",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
