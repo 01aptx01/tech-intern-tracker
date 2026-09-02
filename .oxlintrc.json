@@ -51,13 +51,8 @@
     "typescript/no-namespace": "error",
     "typescript/no-require-imports": "error",
     "typescript/no-unnecessary-type-constraint": "error",
-    "typescript/no-unsafe-function-type": "error"
-    ,"react/react-compiler": "off"
-    ,"typescript/no-explicit-any": "off"
-    ,"typescript/no-floating-promises": "off"
-    ,"typescript/no-base-to-string": "off"
-    ,"eslint/no-unused-vars": "off"
-    ,"nextjs/no-html-link-for-pages": "off"
-    ,"jsx-a11y/no-static-element-interactions": "off"
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-floating-promises": "error",
+    "eslint/no-unused-vars": "warn"
   }
 }

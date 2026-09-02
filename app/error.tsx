@@ -1,0 +1,3 @@
+"use client";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) { return <main className="center-page"><section className="setup-card" role="alert"><AlertTriangle size={30} /><p className="eyebrow">WORKBOOK SETUP</p><h1>เปิดข้อมูล Excel ไม่สำเร็จ</h1><p>{error.message.includes("EXCEL_FILE_PATH") ? error.message : "ตรวจสอบว่าไฟล์ยังอยู่ อ่านได้ และมีชีตกับ header ตามที่กำหนด"}</p><ol><li>ตรวจค่า <code>EXCEL_FILE_PATH</code> ใน <code>.env.local</code></li><li>ปิด Microsoft Excel หากไฟล์ถูกล็อก</li><li>ตรวจชื่อชีตและ header แถว 4</li></ol><button className="primary-button" onClick={reset}><RefreshCw size={17} />ลองอีกครั้ง</button></section></main>; }

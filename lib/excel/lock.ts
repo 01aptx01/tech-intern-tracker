@@ -1,2 +1,7 @@
-import fs from 'node:fs/promises'; import path from 'node:path';
-export async function isWorkbookLocked(file:string){ try{ await fs.access(path.join(path.dirname(file),'~$'+path.basename(file))); return true; }catch{return false;} }
+import fs from "node:fs/promises";
+import path from "node:path";
+
+export const ownerLockPath = (filePath: string) => path.join(path.dirname(filePath), `~$${path.basename(filePath)}`);
+export async function isWorkbookLocked(filePath: string) {
+  try { await fs.access(ownerLockPath(filePath)); return true; } catch { return false; }
+}

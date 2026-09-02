@@ -22,6 +22,7 @@
 
 # debug
 npm-debug.log*
+*.log
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
@@ -33,6 +34,7 @@ yarn-error.log*
 *.xls
 ~$*.xlsx
 *.tmp.xlsx
+*.rollback.xlsx
 *.tsbuildinfo
 backups/
 data/

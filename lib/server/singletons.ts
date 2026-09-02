@@ -1,2 +1,5 @@
-import {getSnapshot} from '@/lib/excel/repository';
-export async function ensureServerReady(){return getSnapshot();}
+import { getExcelRepository } from "@/lib/excel/repository";
+
+export async function ensureServerReady() {
+  return getExcelRepository().initialize();
+}

@@ -1,0 +1,4 @@
+import { AlertTriangle, Clipboard, RefreshCw, X } from "lucide-react";
+export function ConflictDialog({ draft, onReload, onClose }: { draft: unknown; onReload: () => void; onClose: () => void }) {
+  return <div className="dialog-backdrop" role="presentation"><div className="dialog-card" role="alertdialog" aria-modal="true" aria-labelledby="conflict-title"><span className="dialog-icon"><AlertTriangle /></span><h2 id="conflict-title">ไฟล์ Excel มีการเปลี่ยนแปลง</h2><p>ข้อมูลถูกแก้หลังจากที่หน้านี้โหลด ระบบจึงหยุดเพื่อไม่ให้เขียนทับข้อมูลล่าสุด</p><div className="dialog-actions"><button className="primary-button" onClick={onReload}><RefreshCw size={17} />โหลดข้อมูลล่าสุด</button><button className="secondary-button" onClick={() => void navigator.clipboard.writeText(JSON.stringify(draft, null, 2))}><Clipboard size={17} />คัดลอกข้อมูลที่กรอก</button><button className="text-button" onClick={onClose}><X size={17} />ยกเลิก</button></div></div></div>;
+}

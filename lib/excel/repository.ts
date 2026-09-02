@@ -1,13 +1,162 @@
-import fs from 'node:fs/promises'; import path from 'node:path'; import crypto from 'node:crypto'; import ExcelJS from 'exceljs'; import {Mutex} from 'async-mutex'; import {getConfig} from './config'; import {readWorkbook} from './reader'; import {createBackup} from './backup'; import {isWorkbookLocked} from './lock'; import {SHEET,HEADER_ROW,DATA_START,headers} from './constants'; import {stringToExcelDate} from './date'; import {safeExcelText,splitTags,normalizeCompanyName} from '@/lib/companies/normalize'; import {eventBus} from '@/lib/events/workbook-event-bus'; import type {CompanyInput,CompanyRecord,WorkbookSnapshot} from '@/types/company';
-const mutex=new Mutex();
-const g=globalThis as typeof globalThis & {__trackerSnapshot?:WorkbookSnapshot};
-export async function getSnapshot(){ if(!g.__trackerSnapshot) g.__trackerSnapshot=await readWorkbook(); return g.__trackerSnapshot; }
-function err(code:string,message:string,status:number=500){const e=new Error(message); Object.assign(e,{code,status}); return e;}
-async function mutate(baseVersion:string, action:(wb:ExcelJS.Workbook,ws:ExcelJS.Worksheet,records:CompanyRecord[])=>CompanyRecord[]){return mutex.runExclusive(async()=>{const cfg=getConfig(); const current=await readWorkbook(); if(current.version!==baseVersion) throw err('VERSION_CONFLICT','ไฟล์ Excel มีการเปลี่ยนแปลงหลังจากที่หน้านี้โหลด',409); if(await isWorkbookLocked(cfg.file)) throw err('WORKBOOK_LOCKED','Excel กำลังใช้งานไฟล์นี้อยู่ กรุณาบันทึกและปิดไฟล์ก่อนลองอีกครั้ง',423); const wb=new ExcelJS.Workbook(); await wb.xlsx.readFile(cfg.file); const ws=wb.getWorksheet(SHEET)!; const records=current.records.map(r=>({...r,techRoles:[...r.techRoles],programTypes:[...r.programTypes]})); await createBackup(cfg.file,cfg.backupDir); const next=action(wb,ws,records); const tmp=path.join(path.dirname(cfg.file),`.${path.basename(cfg.file)}.${crypto.randomUUID()}.tmp.xlsx`); try{ await wb.xlsx.writeFile(tmp); const verify=await readWorkbook(tmp); if(verify.records.length!==next.length) throw err('WRITE_FAILED','ตรวจสอบไฟล์ชั่วคราวไม่ผ่าน'); await fs.rename(tmp,cfg.file); const snap=await readWorkbook(); g.__trackerSnapshot=snap; eventBus.emit({type:'workbook.changed',version:snap.version,at:snap.lastModifiedAt}); return snap; }catch(e){try{await fs.unlink(tmp)}catch{}; throw e;} });}
-function writeValue(cell:ExcelJS.Cell,key:keyof CompanyRecord,value:unknown){ if(['techRoles','programTypes'].includes(key)) cell.value=safeExcelText((value as string[]).join('; ')); else if(['applicationDeadline','verifiedAt','contactedAt','followUpAt'].includes(key)) {cell.value=stringToExcelDate(value as string|null); if(cell.value) cell.numFmt='yyyy-mm-dd';} else cell.value=typeof value==='string'?safeExcelText(value):value as ExcelJS.CellValue; }
-function findCol(ws:ExcelJS.Worksheet,name:string){for(let c=1;c<=headers.length;c++)if(String(ws.getCell(HEADER_ROW,c).value||'')===name)return c; return headers.indexOf(name as typeof headers[number])+1;}
-function syncRows(ws:ExcelJS.Worksheet,records:CompanyRecord[]){const cols:Record<string,number>={order:1,companyName:2,business:3,techRoles:4,thailandLocation:5,workMode:6,contact:7,applicationUrl:8,announcementStatus:9,applicationWindow:10,applicationDeadline:11,internshipPeriod:12,programTypes:13,qualificationsNotes:14,primarySourceUrl:15,secondarySourceUrl:16,verifiedAt:17,evidenceLevel:18,userStatus:19,contactedAt:20,followUpAt:21,personalNotes:22,id:23}; ws.spliceRows(DATA_START,Math.max(0,ws.rowCount-DATA_START+1),...records.map((r,i)=>{const vals:Array<ExcelJS.CellValue>=[]; vals[0]=i+1; vals[1]=safeExcelText(r.companyName); vals[2]=safeExcelText(r.business); vals[3]=safeExcelText(r.techRoles.join('; ')); vals[4]=safeExcelText(r.thailandLocation); vals[5]=safeExcelText(r.workMode); vals[6]=safeExcelText(r.contact); vals[7]=safeExcelText(r.applicationUrl); vals[8]=safeExcelText(r.announcementStatus); vals[9]=safeExcelText(r.applicationWindow); vals[10]=stringToExcelDate(r.applicationDeadline); vals[11]=safeExcelText(r.internshipPeriod); vals[12]=safeExcelText(r.programTypes.join('; ')); vals[13]=safeExcelText(r.qualificationsNotes); vals[14]=safeExcelText(r.primarySourceUrl); vals[15]=safeExcelText(r.secondarySourceUrl); vals[16]=stringToExcelDate(r.verifiedAt); vals[17]=r.evidenceLevel; vals[18]=r.userStatus; vals[19]=stringToExcelDate(r.contactedAt); vals[20]=stringToExcelDate(r.followUpAt); vals[21]=safeExcelText(r.personalNotes); vals[22]=r.id; return vals;})); ws.getColumn(23).hidden=true; for(let r=DATA_START;r<DATA_START+records.length;r++){for(const c of [11,17,20,21]) ws.getCell(r,c).numFmt='yyyy-mm-dd';}}
-export async function createCompany(baseVersion:string,input:CompanyInput){return mutate(baseVersion,(wb,ws,records)=>{if(records.some(r=>normalizeCompanyName(r.companyName)===normalizeCompanyName(input.companyName))) throw err('DUPLICATE_COMPANY','มีบริษัทชื่อนี้อยู่แล้ว',409); const rec:CompanyRecord={...input,id:crypto.randomUUID(),order:records.length+1}; records.push(rec); syncRows(ws,records); return records;});}
-export async function updateCompany(id:string,baseVersion:string,changes:Partial<CompanyInput>){return mutate(baseVersion,(wb,ws,records)=>{const i=records.findIndex(r=>r.id===id); if(i<0) throw err('RECORD_NOT_FOUND','ไม่พบรายการบริษัทนี้',404); const merged={...records[i],...changes}; if(changes.companyName && records.some((r,j)=>j!==i&&normalizeCompanyName(r.companyName)===normalizeCompanyName(changes.companyName!))) throw err('DUPLICATE_COMPANY','มีบริษัทชื่อนี้อยู่แล้ว',409); records[i]=merged; syncRows(ws,records); return records;});}
-export async function deleteCompany(id:string,baseVersion:string,confirmationName:string){return mutate(baseVersion,(wb,ws,records)=>{const i=records.findIndex(r=>r.id===id); if(i<0) throw err('RECORD_NOT_FOUND','ไม่พบรายการบริษัทนี้',404); if(records[i].companyName!==confirmationName) throw err('VALIDATION_ERROR','ชื่อยืนยันไม่ตรงกัน',422); records.splice(i,1); syncRows(ws,records); return records;});}
-export async function downloadWorkbook(){const cfg=getConfig(); return fs.readFile(cfg.file);}
+import fs from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { Mutex } from "async-mutex";
+import { AppError, toAppError } from "@/lib/api/errors";
+import { normalizeCompanyName } from "@/lib/companies/normalize";
+import { companyRecordSchema } from "@/lib/companies/schema";
+import { eventBus } from "@/lib/events/workbook-event-bus";
+import type { CompanyInput, CompanyRecord, WorkbookSnapshot } from "@/types/company";
+import { createBackup } from "./backup";
+import { type ExcelConfig, getExcelConfig } from "./config";
+import { isWorkbookLocked } from "./lock";
+import { loadWorkbookState, toSnapshot, type WorkbookState } from "./reader";
+import { WorkbookWatcher } from "./watcher";
+import { prepareAdd, prepareDelete, preparePatch, prepareTechnicalIds, saveAndVerify } from "./writer";
+
+const globals = globalThis as typeof globalThis & {
+  __trackerMutex?: Mutex;
+  __trackerRepository?: ExcelRepository;
+};
+const writeMutex = globals.__trackerMutex ??= new Mutex();
+
+export class ExcelRepository {
+  private snapshot: WorkbookSnapshot | null = null;
+  private watcher: WorkbookWatcher | null = null;
+  private initializing: Promise<WorkbookSnapshot> | null = null;
+
+  constructor(private readonly config: ExcelConfig) {}
+
+  initialize() {
+    if (!this.initializing) this.initializing = this.initializeOnce().catch((error) => { this.initializing = null; throw error; });
+    return this.initializing;
+  }
+
+  private async initializeOnce() {
+    const state = await loadWorkbookState(this.config.filePath);
+    this.snapshot = state.needsIdRepair ? await this.repairIds(state) : toSnapshot(state);
+    this.watcher = new WorkbookWatcher(this.config.filePath, { refresh: () => this.refreshFromDisk() });
+    this.watcher.start();
+    return this.snapshot;
+  }
+
+  private async repairIds(initialState?: WorkbookState) {
+    return writeMutex.runExclusive(async () => {
+      const state = initialState ?? await loadWorkbookState(this.config.filePath);
+      if (!state.needsIdRepair) return toSnapshot(state);
+      if (await isWorkbookLocked(this.config.filePath)) throw new AppError("WORKBOOK_LOCKED", "Excel กำลังใช้งานไฟล์นี้อยู่ กรุณาบันทึกและปิดไฟล์ก่อนลองอีกครั้ง", 423, true);
+      await createBackup(this.config.filePath, this.config.backupDir);
+      prepareTechnicalIds(state);
+      await saveAndVerify(state, this.config.filePath, state.records);
+      return toSnapshot(await loadWorkbookState(this.config.filePath));
+    });
+  }
+
+  async getSnapshot(options: { fresh?: boolean } = {}) {
+    if (!this.snapshot) await this.initialize();
+    if (options.fresh) {
+      try { await this.refreshFromDisk(); }
+      catch { /* Return the last valid snapshot with an error state. */ }
+    }
+    return this.snapshot!;
+  }
+
+  async refreshFromDisk() {
+    const previousVersion = this.snapshot?.version;
+    try {
+      const state = await loadWorkbookState(this.config.filePath);
+      this.snapshot = state.needsIdRepair ? await this.repairIds(state) : toSnapshot(state);
+      return {
+        version: this.snapshot.version,
+        lastModifiedAt: this.snapshot.lastModifiedAt,
+        changed: previousVersion !== undefined && previousVersion !== this.snapshot.version,
+      };
+    } catch (error) {
+      if (this.snapshot) {
+        this.snapshot = { ...this.snapshot, syncStatus: "error", errorMessage: error instanceof Error ? error.message : "อ่านไฟล์ไม่สำเร็จ" };
+      }
+      throw error;
+    }
+  }
+
+  private async mutate(
+    baseVersion: string,
+    transform: (state: WorkbookState) => { records: CompanyRecord[]; verify?: (actual: CompanyRecord[]) => boolean },
+  ) {
+    return writeMutex.runExclusive(async () => {
+      try {
+        const state = await loadWorkbookState(this.config.filePath);
+        if (state.version !== baseVersion) throw new AppError("VERSION_CONFLICT", "ไฟล์ Excel มีการเปลี่ยนแปลงหลังจากที่หน้านี้โหลด", 409, true);
+        if (await isWorkbookLocked(this.config.filePath)) throw new AppError("WORKBOOK_LOCKED", "Excel กำลังใช้งานไฟล์นี้อยู่ กรุณาบันทึกและปิดไฟล์ก่อนลองอีกครั้ง", 423, true);
+        await createBackup(this.config.filePath, this.config.backupDir);
+        const result = transform(state);
+        await saveAndVerify(state, this.config.filePath, result.records, result.verify);
+        const next = toSnapshot(await loadWorkbookState(this.config.filePath));
+        this.snapshot = next;
+        eventBus.emit({ type: "workbook.changed", version: next.version, at: next.lastModifiedAt, source: "app" });
+        return next;
+      } catch (error) {
+        throw toAppError(error, "WRITE_FAILED");
+      }
+    });
+  }
+
+  async create(baseVersion: string, input: CompanyInput) {
+    return this.mutate(baseVersion, (state) => {
+      if (state.records.some((record) => normalizeCompanyName(record.companyName) === normalizeCompanyName(input.companyName))) {
+        throw new AppError("DUPLICATE_COMPANY", "มีบริษัทชื่อนี้อยู่แล้ว", 409, false);
+      }
+      const record = companyRecordSchema.parse({ ...input, id: randomUUID(), order: state.records.length + 1 });
+      prepareAdd(state, record);
+      return { records: [...state.records, record], verify: (records) => records.some((item) => item.id === record.id) };
+    });
+  }
+
+  async update(id: string, baseVersion: string, changes: Partial<CompanyInput>) {
+    return this.mutate(baseVersion, (state) => {
+      const current = state.records.find((record) => record.id === id);
+      if (!current) throw new AppError("RECORD_NOT_FOUND", "ไม่พบรายการบริษัทนี้", 404, false);
+      const next = companyRecordSchema.parse({ ...current, ...changes });
+      if (state.records.some((record) => record.id !== id && normalizeCompanyName(record.companyName) === normalizeCompanyName(next.companyName))) {
+        throw new AppError("DUPLICATE_COMPANY", "มีบริษัทชื่อนี้อยู่แล้ว", 409, false);
+      }
+      const fields = Object.keys(changes) as (keyof CompanyInput)[];
+      preparePatch(state, next, fields);
+      const records = state.records.map((record) => record.id === id ? next : record);
+      return {
+        records,
+        verify: (actual) => {
+          const saved = actual.find((record) => record.id === id);
+          return Boolean(saved && fields.every((field) => JSON.stringify(saved[field]) === JSON.stringify(next[field])));
+        },
+      };
+    });
+  }
+
+  async delete(id: string, baseVersion: string, confirmationName: string) {
+    return this.mutate(baseVersion, (state) => {
+      const current = state.records.find((record) => record.id === id);
+      if (!current) throw new AppError("RECORD_NOT_FOUND", "ไม่พบรายการบริษัทนี้", 404, false);
+      if (current.companyName !== confirmationName) throw new AppError("VALIDATION_ERROR", "ชื่อยืนยันไม่ตรงกับชื่อบริษัท", 422, false);
+      const records = state.records.filter((record) => record.id !== id).map((record, index) => ({ ...record, order: index + 1 }));
+      prepareDelete(state, id, records);
+      return { records, verify: (actual) => !actual.some((record) => record.id === id) };
+    });
+  }
+
+  async download() {
+    await this.getSnapshot({ fresh: true });
+    return fs.readFile(this.config.filePath);
+  }
+
+  async close() { await this.watcher?.close(); }
+}
+
+export function getExcelRepository() {
+  return globals.__trackerRepository ??= new ExcelRepository(getExcelConfig());
+}
+
+export const getSnapshot = (options?: { fresh?: boolean }) => getExcelRepository().getSnapshot(options);
+export const createCompany = (baseVersion: string, input: CompanyInput) => getExcelRepository().create(baseVersion, input);
+export const updateCompany = (id: string, baseVersion: string, changes: Partial<CompanyInput>) => getExcelRepository().update(id, baseVersion, changes);
+export const deleteCompany = (id: string, baseVersion: string, confirmationName: string) => getExcelRepository().delete(id, baseVersion, confirmationName);
+export const downloadWorkbook = () => getExcelRepository().download();

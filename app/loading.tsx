@@ -1,0 +1,1 @@
+export default function Loading() { return <main className="loading-shell" aria-live="polite"><p className="sr-only">กำลังโหลดข้อมูลจาก Excel</p><div className="loading-header" /><div className="loading-grid">{Array.from({ length: 5 }, (_, index) => <div key={index} />)}</div><div className="loading-table" /></main>; }

@@ -1,26 +1,117 @@
-import fs from 'node:fs/promises';
-import crypto, { randomUUID } from 'node:crypto';
-import path from 'node:path';
-import ExcelJS from 'exceljs';
-import { getConfig } from './config';
-import { SHEET, HEADER_ROW, DATA_START, headers } from './constants';
-import { cleanText, splitTags } from '@/lib/companies/normalize';
-import { excelDateToString } from './date';
-import type { CompanyRecord, WorkbookSnapshot } from '@/types/company';
-import { createBackup } from './backup';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import ExcelJS from "exceljs";
+import { AppError } from "@/lib/api/errors";
+import { cleanText, normalizeCompanyName, splitTags } from "@/lib/companies/normalize";
+import { companyRecordSchema } from "@/lib/companies/schema";
+import type { CompanyRecord, WorkbookSnapshot } from "@/types/company";
+import { getExcelConfig } from "./config";
+import { DATA_START_ROW, MAIN_SHEET, RECORD_ID_COLUMN, REQUIRED_SHEETS } from "./constants";
+import { excelDateToDateOnly } from "./date";
+import { validateAndMapHeaders } from "./headers";
+import { hashWorkbook } from "./snapshot";
 
-const cellText = (v: unknown): unknown => { if (v && typeof v === 'object' && 'text' in v) return String((v as {text:string}).text); if (v && typeof v === 'object' && 'result' in v) return (v as {result:unknown}).result; return v; };
-export async function readWorkbook(fileOverride?: string): Promise<WorkbookSnapshot> {
-  const cfg=getConfig(); const file=fileOverride||cfg.file; const stat=await fs.stat(file); const bytes=await fs.readFile(file);
-  const version=crypto.createHash('sha256').update(bytes as unknown as Buffer).digest('hex'); const wb=new ExcelJS.Workbook(); await wb.xlsx.load(bytes as never);
-  const ws=wb.getWorksheet(SHEET); if(!ws) throw new Error(`Missing worksheet ${SHEET}`);
-  const map=new Map<string,number>(); let hasIdHeader=false; for(let c=1;c<=headers.length;c++){const expected=headers[c-1]; const actual=cleanText(ws.getCell(HEADER_ROW,c).value); if(c===2 && !actual) throw new Error('Header row 4 does not match expected workbook schema'); if(c===23 && actual==='_record_id') hasIdHeader=true; map.set(expected,c);}
-  const records:CompanyRecord[]=[];
-  for(let r=DATA_START;r<=ws.rowCount;r++){const row=ws.getRow(r); const name=cleanText(cellText(row.getCell(map.get('บริษัท')!).value)); const id=map.has('_record_id')?cleanText(cellText(row.getCell(map.get('_record_id')!).value)):null; if(!name&&!id) continue; if(!name) continue;
-    const val=(h:string)=>cellText(row.getCell(map.get(h)!).value);
-    records.push({id:id||randomUUID(),order:Number(val('ลำดับ'))||records.length+1,companyName:name,business:cleanText(val('ธุรกิจ')),techRoles:splitTags(val('สาย Tech ที่เกี่ยวข้อง')),thailandLocation:cleanText(val('ที่ตั้ง/สถานที่ฝึกในไทย')),workMode:cleanText(val('รูปแบบทำงาน')),contact:cleanText(val('ข้อมูลติดต่อ HR / บริษัท')),applicationUrl:cleanText(val('ลิงก์สมัคร/อาชีพ')),announcementStatus:(cleanText(val('สถานะประกาศ'))||'ไม่พบประกาศปัจจุบัน') as CompanyRecord['announcementStatus'],applicationWindow:cleanText(val('ช่วงเปิดรับ/Deadline')),applicationDeadline:excelDateToString(val('วันปิดรับ')),internshipPeriod:cleanText(val('ช่วงฝึกงาน/สหกิจ')),programTypes:splitTags(val('ประเภทโปรแกรม')),qualificationsNotes:cleanText(val('คุณสมบัติ/หมายเหตุ')),primarySourceUrl:cleanText(val('แหล่งอ้างอิงหลัก')),secondarySourceUrl:cleanText(val('แหล่งอ้างอิงเสริม')),verifiedAt:excelDateToString(val('ตรวจสอบล่าสุด')),evidenceLevel:(cleanText(val('ระดับหลักฐาน'))||'C') as CompanyRecord['evidenceLevel'],userStatus:(cleanText(val('สถานะของคุณ'))||null) as CompanyRecord['userStatus'],contactedAt:excelDateToString(val('วันที่ติดต่อ')),followUpAt:excelDateToString(val('ติดตามครั้งถัดไป')),personalNotes:cleanText(val('หมายเหตุส่วนตัว'))});
-  }
-  const ids=new Set<string>(); let needs=!hasIdHeader; for(const rec of records){if(ids.has(rec.id)){rec.id=randomUUID();needs=true;} ids.add(rec.id);} if(needs){await initializeIds(file,records,wb,ws,map); return readWorkbook(file);}
-  return {records,version,lastModifiedAt:stat.mtime.toISOString(),total:records.length,sourceFileName:path.basename(file),syncStatus:'synced'};
+export interface WorkbookState {
+  workbook: ExcelJS.Workbook;
+  worksheet: ExcelJS.Worksheet;
+  records: CompanyRecord[];
+  rowById: Map<string, number>;
+  version: string;
+  lastModifiedAt: string;
+  sourceFileName: string;
+  needsIdRepair: boolean;
+  lastDataRow: number;
 }
-async function initializeIds(file:string,records:CompanyRecord[],wb:ExcelJS.Workbook,ws:ExcelJS.Worksheet,map:Map<string,number>){const cfg=getConfig(); await createBackup(file,cfg.backupDir); const idCol=map.get('_record_id')||23; ws.getCell(HEADER_ROW,idCol).value='_record_id'; ws.getColumn(idCol).hidden=true; let i=0; for(let r=DATA_START;r<=ws.rowCount;r++){const name=cleanText(ws.getCell(r,map.get('บริษัท')!).value); if(name) ws.getCell(r,idCol).value=records[i++]?.id||randomUUID();} const tmp=`${file}.${randomUUID()}.tmp.xlsx`; await wb.xlsx.writeFile(tmp); await fs.rename(tmp,file);}
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function resolveCellValue(cell: ExcelJS.Cell, preferHyperlink = false): unknown {
+  const value = cell.value;
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value instanceof Date) return value;
+  if ("error" in value) throw new AppError("INVALID_WORKBOOK", `พบ formula error ที่ ${cell.address}`, 500, false);
+  if ("formula" in value || "sharedFormula" in value) {
+    const result = value.result;
+    if (result && typeof result === "object" && "error" in result) throw new AppError("INVALID_WORKBOOK", `พบ formula error ที่ ${cell.address}`, 500, false);
+    return result ?? null;
+  }
+  if ("richText" in value) return value.richText.map((part) => part.text).join("");
+  if ("hyperlink" in value) return preferHyperlink ? value.hyperlink : value.text;
+  return null;
+}
+
+function fieldErrorMessage(row: number, issues: { path: PropertyKey[]; message: string }[]) {
+  return `ข้อมูลแถว ${row} ไม่ถูกต้อง: ${issues.map((issue) => `${String(issue.path[0])}: ${issue.message}`).join(", ")}`;
+}
+
+export async function loadWorkbookState(fileOverride?: string): Promise<WorkbookState> {
+  const filePath = fileOverride ?? getExcelConfig().filePath;
+  const [bytes, stat] = await Promise.all([fs.readFile(filePath), fs.stat(filePath)]);
+
+  const workbook = new ExcelJS.Workbook();
+  try { await workbook.xlsx.load(bytes as never); }
+  catch { throw new AppError("INVALID_WORKBOOK", "ไฟล์ Excel เสียหรืออ่านไม่สำเร็จ", 500, false); }
+
+  for (const sheetName of REQUIRED_SHEETS) {
+    if (!workbook.getWorksheet(sheetName)) throw new AppError("INVALID_WORKBOOK", `ไม่พบชีต ${sheetName}`, 500, false);
+  }
+  const worksheet = workbook.getWorksheet(MAIN_SHEET)!;
+  const { hasRecordIdHeader } = validateAndMapHeaders(worksheet);
+  const records: CompanyRecord[] = [];
+  const rowById = new Map<string, number>();
+  const companyNames = new Set<string>();
+  let needsIdRepair = !hasRecordIdHeader;
+  let lastDataRow = DATA_START_ROW - 1;
+
+  for (let rowNumber = DATA_START_ROW; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+    const row = worksheet.getRow(rowNumber);
+    const companyName = cleanText(resolveCellValue(row.getCell(2)));
+    const rawId = cleanText(resolveCellValue(row.getCell(RECORD_ID_COLUMN)));
+    if (!companyName && !rawId) continue;
+    if (!companyName) throw new AppError("INVALID_WORKBOOK", `แถว ${rowNumber} มี record ID แต่ไม่มีชื่อบริษัท`, 500, false);
+
+    let id = rawId;
+    if (!id || !uuidPattern.test(id) || rowById.has(id)) { id = randomUUID(); needsIdRepair = true; }
+    const value = (column: number, hyperlink = false) => resolveCellValue(row.getCell(column), hyperlink);
+    const candidate: CompanyRecord = {
+      id,
+      order: Number(value(1)) || records.length + 1,
+      companyName,
+      business: cleanText(value(3)),
+      techRoles: splitTags(value(4)),
+      thailandLocation: cleanText(value(5)),
+      workMode: cleanText(value(6)),
+      contact: cleanText(value(7)),
+      applicationUrl: cleanText(value(8, true)),
+      announcementStatus: cleanText(value(9)) as CompanyRecord["announcementStatus"],
+      applicationWindow: cleanText(value(10)),
+      applicationDeadline: excelDateToDateOnly(value(11)),
+      internshipPeriod: cleanText(value(12)),
+      programTypes: splitTags(value(13)),
+      qualificationsNotes: cleanText(value(14)),
+      primarySourceUrl: cleanText(value(15, true)),
+      secondarySourceUrl: cleanText(value(16, true)),
+      verifiedAt: excelDateToDateOnly(value(17)),
+      evidenceLevel: cleanText(value(18)) as CompanyRecord["evidenceLevel"],
+      userStatus: cleanText(value(19)) as CompanyRecord["userStatus"],
+      contactedAt: excelDateToDateOnly(value(20)),
+      followUpAt: excelDateToDateOnly(value(21)),
+      personalNotes: cleanText(value(22)),
+    };
+    const parsed = companyRecordSchema.safeParse(candidate);
+    if (!parsed.success) throw new AppError("INVALID_WORKBOOK", fieldErrorMessage(rowNumber, parsed.error.issues), 500, false);
+    const normalizedName = normalizeCompanyName(parsed.data.companyName);
+    if (companyNames.has(normalizedName)) throw new AppError("INVALID_WORKBOOK", `พบชื่อบริษัทซ้ำที่แถว ${rowNumber}`, 500, false);
+    companyNames.add(normalizedName);
+    records.push(parsed.data);
+    rowById.set(id, rowNumber);
+    lastDataRow = rowNumber;
+  }
+
+  return { workbook, worksheet, records, rowById, version: hashWorkbook(bytes), lastModifiedAt: stat.mtime.toISOString(), sourceFileName: path.basename(filePath), needsIdRepair, lastDataRow };
+}
+
+export function toSnapshot(state: WorkbookState, syncStatus: WorkbookSnapshot["syncStatus"] = "synced"): WorkbookSnapshot {
+  return { records: state.records, version: state.version, lastModifiedAt: state.lastModifiedAt, total: state.records.length, sourceFileName: state.sourceFileName, syncStatus };
+}

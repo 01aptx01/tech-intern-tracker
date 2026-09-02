@@ -1,0 +1,2 @@
+import { LockKeyhole } from "lucide-react";
+export function FileLockAlert({ onRetry, busy }: { onRetry: () => void; busy: boolean }) { return <div className="lock-alert" role="alert"><LockKeyhole size={19} /><span><strong>Excel กำลังใช้งานไฟล์นี้อยู่</strong> กรุณาบันทึกและปิดไฟล์ก่อนลองอีกครั้ง ข้อมูลที่กรอกยังอยู่</span><button className="secondary-button" onClick={onRetry} disabled={busy}>ลองบันทึกอีกครั้ง</button></div>; }

@@ -1,4 +1,38 @@
-import {NextResponse} from 'next/server'; import {getSnapshot,updateCompany,deleteCompany} from '@/lib/excel/repository'; import {patchSchema} from '@/lib/companies/schema'; import {fail,ok} from '@/lib/api/response'; import {guard} from '@/lib/api/origin-guard';
-export const runtime='nodejs';
-export async function PATCH(req:Request,{params}:{params:Promise<{id:string}>}){try{if(!guard(req)) return NextResponse.json({error:{code:'INVALID_ORIGIN',message:'คำขอไม่ถูกต้อง',retryable:false}},{status:403}); const id=(await params).id; const body:unknown=await req.json(); const parsed=patchSchema.safeParse(body); if(!parsed.success) return NextResponse.json({error:{code:'VALIDATION_ERROR',message:'กรุณาตรวจสอบข้อมูล',retryable:false}},{status:422}); const s=await updateCompany(id,parsed.data.baseVersion,parsed.data.changes); return ok({record:s.records.find(r=>r.id===id)},s)}catch(e){return fail(e)}}
-export async function DELETE(req:Request,{params}:{params:Promise<{id:string}>}){try{if(!guard(req)) return NextResponse.json({error:{code:'INVALID_ORIGIN',message:'คำขอไม่ถูกต้อง',retryable:false}},{status:403}); const id=(await params).id; const body:unknown=await req.json(); if(!body||typeof body!=='object'||typeof (body as Record<string,unknown>).baseVersion!=='string'||typeof (body as Record<string,unknown>).confirmationName!=='string') return NextResponse.json({error:{code:'BAD_REQUEST',message:'ข้อมูลคำขอไม่ครบ',retryable:false}},{status:400}); const b=body as {baseVersion:string;confirmationName:string}; const s=await deleteCompany(id,b.baseVersion,b.confirmationName); return ok({records:s.records,total:s.total},s)}catch(e){return fail(e)}}
+import { NextResponse } from "next/server";
+import { deleteCompanySchema, patchCompanySchema } from "@/lib/companies/schema";
+import { deleteCompany, updateCompany } from "@/lib/excel/repository";
+import { isValidMutationRequest } from "@/lib/api/origin-guard";
+import { fail, ok, validationFailure } from "@/lib/api/response";
+
+export const runtime = "nodejs";
+type Context = { params: Promise<{ id: string }> };
+
+function invalidOrigin() {
+  return NextResponse.json({ error: { code: "INVALID_ORIGIN", message: "คำขอนี้ไม่ได้มาจากแอปในเครื่อง", retryable: false } }, { status: 403 });
+}
+
+export async function PATCH(request: Request, { params }: Context) {
+  try {
+    if (!isValidMutationRequest(request)) return invalidOrigin();
+    let body: unknown;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: { code: "BAD_REQUEST", message: "JSON ไม่ถูกต้อง", retryable: false } }, { status: 400 }); }
+    const parsed = patchCompanySchema.safeParse(body);
+    if (!parsed.success) return validationFailure(parsed.error);
+    const { id } = await params;
+    const snapshot = await updateCompany(id, parsed.data.baseVersion, parsed.data.changes);
+    return ok({ record: snapshot.records.find((record) => record.id === id), records: snapshot.records, total: snapshot.total }, snapshot);
+  } catch (error) { return fail(error); }
+}
+
+export async function DELETE(request: Request, { params }: Context) {
+  try {
+    if (!isValidMutationRequest(request)) return invalidOrigin();
+    let body: unknown;
+    try { body = await request.json(); } catch { return NextResponse.json({ error: { code: "BAD_REQUEST", message: "JSON ไม่ถูกต้อง", retryable: false } }, { status: 400 }); }
+    const parsed = deleteCompanySchema.safeParse(body);
+    if (!parsed.success) return validationFailure(parsed.error);
+    const { id } = await params;
+    const snapshot = await deleteCompany(id, parsed.data.baseVersion, parsed.data.confirmationName);
+    return ok({ records: snapshot.records, total: snapshot.total }, snapshot);
+  } catch (error) { return fail(error); }
+}
