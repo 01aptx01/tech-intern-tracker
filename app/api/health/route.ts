@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server'; import {getSnapshot} from '@/lib/excel/repository'; import {getConfig} from '@/lib/excel/config'; import {isWorkbookLocked} from '@/lib/excel/lock';
+export const runtime='nodejs'; export async function GET(){try{const s=await getSnapshot(); return NextResponse.json({status:'ok',workbookReadable:true,workbookLocked:await isWorkbookLocked(getConfig().file),version:s.version})}catch{return NextResponse.json({status:'degraded',workbookReadable:false,workbookLocked:false,version:null},{status:500})}}

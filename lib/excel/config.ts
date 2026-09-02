@@ -1,0 +1,2 @@
+import path from 'node:path';
+export function getConfig(){ const file=process.env.EXCEL_FILE_PATH; if(!file) throw new Error('EXCEL_FILE_PATH is not configured'); if(!path.isAbsolute(file)&&! /^[A-Za-z]:[\\/]/.test(file)&&!file.startsWith('file://')) throw new Error('EXCEL_FILE_PATH must be absolute'); if(path.extname(file).toLowerCase()!=='.xlsx') throw new Error('EXCEL_FILE_PATH must point to an .xlsx file'); return {file, backupDir: process.env.EXCEL_BACKUP_DIR || path.join(path.dirname(file),'backups'), origin: process.env.APP_ORIGIN || 'http://127.0.0.1:3000'}; }

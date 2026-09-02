@@ -1,0 +1,3 @@
+import {eventBus} from '@/lib/events/workbook-event-bus';
+export const runtime='nodejs';
+export async function GET(){const encoder=new TextEncoder(); let unsubscribe:()=>void=()=>{}; const stream=new ReadableStream({start(controller){const send=(e:unknown)=>controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`)); unsubscribe=eventBus.subscribe(send); const timer=setInterval(()=>send({type:'heartbeat',at:new Date().toISOString()}),20000); (controller as unknown as {timer?:NodeJS.Timeout}).timer=timer; send({type:'connected',at:new Date().toISOString()});},cancel(){unsubscribe();}}); return new Response(stream,{headers:{'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive'}})}

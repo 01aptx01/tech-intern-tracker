@@ -1,0 +1,2 @@
+import fs from 'node:fs/promises'; import path from 'node:path';
+export async function createBackup(file:string, dir:string){ await fs.mkdir(dir,{recursive:true}); const stamp=new Date().toISOString().replace(/[:.]/g,'-'); const out=path.join(dir,`${path.basename(file,'.xlsx')}.${stamp}.xlsx`); await fs.copyFile(file,out); const files=(await fs.readdir(dir)).filter(f=>f.endsWith('.xlsx')).sort().reverse(); for(const old of files.slice(20)) await fs.unlink(path.join(dir,old)); return out; }
