@@ -49,12 +49,16 @@ describe('accessible modal lifecycle', () => {
     const dialog = await screen.findByRole('dialog', { name: 'เพิ่มบริษัทใหม่' });
     expect(dialog).toHaveAttribute('open');
     expect(dialog).toHaveClass('company-editor');
-    expect(screen.getByRole('textbox', { name: /ชื่อบริษัท/ })).toBeRequired();
+    expect(screen.getByRole('textbox', { name: /ชื่อที่รู้จัก/ })).toBeRequired();
+    expect(screen.getByRole('textbox', { name: /ชื่อเต็ม/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: /โครงการที่เปิดรับ/ }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('combobox', { name: /สถานะประกาศ/ }),
     ).toBeRequired();
     expect(screen.getByRole('combobox', { name: /ระดับหลักฐาน/ })).toBeRequired();
-    expect(screen.getByRole('textbox', { name: /ชื่อบริษัท/ })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: /ชื่อที่รู้จัก/ })).toHaveFocus();
 
     unmount();
     expect(opener).toHaveFocus();

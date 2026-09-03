@@ -15,8 +15,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run tests/integration",
-    "inspect:workbook": "node --import tsx scripts/inspect-workbook.ts",
-    "verify:environment": "node --import tsx scripts/verify-environment.ts",
+    "inspect:workbook": "node --env-file-if-exists=.env.local --import tsx scripts/inspect-workbook.ts",
+    "migrate:company-fields": "node --env-file-if-exists=.env.local --import tsx scripts/migrate-company-fields.ts",
+    "verify:environment": "node --env-file-if-exists=.env.local --import tsx scripts/verify-environment.ts",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

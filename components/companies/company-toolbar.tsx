@@ -96,7 +96,7 @@ export function CompanyToolbar({
             onKeyDown={(event) => {
               if (event.key === 'Escape') onQuery('');
             }}
-            placeholder="ค้นหาบริษัท สายงาน ที่ตั้ง ติดต่อ หรือหมายเหตุ…"
+            placeholder="ค้นหาชื่อ ชื่อเต็ม โครงการ สายงาน ที่ตั้ง หรือหมายเหตุ…"
             aria-label="ค้นหาบริษัท"
           />
           <kbd aria-hidden="true">Ctrl K</kbd>

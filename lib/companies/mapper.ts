@@ -1,11 +1,29 @@
-import type { CompanyInput, CompanyRecord } from "@/types/company";
+import type { CompanyInput, CompanyRecord } from '@/types/company';
 
 export const emptyCompanyInput = (): CompanyInput => ({
-  companyName: "", business: null, techRoles: [], thailandLocation: null, workMode: null, contact: null,
-  applicationUrl: null, announcementStatus: "ไม่พบประกาศปัจจุบัน", applicationWindow: null,
-  applicationDeadline: null, internshipPeriod: null, programTypes: [], qualificationsNotes: null,
-  primarySourceUrl: null, secondarySourceUrl: null, verifiedAt: null, evidenceLevel: "C", userStatus: null,
-  contactedAt: null, followUpAt: null, personalNotes: null,
+  companyName: '',
+  fullCompanyName: null,
+  business: null,
+  techRoles: [],
+  thailandLocation: null,
+  workMode: null,
+  contact: null,
+  applicationUrl: null,
+  announcementStatus: 'ไม่พบประกาศปัจจุบัน',
+  applicationWindow: null,
+  applicationDeadline: null,
+  internshipPeriod: null,
+  programTypes: [],
+  openPrograms: [],
+  qualificationsNotes: null,
+  primarySourceUrl: null,
+  secondarySourceUrl: null,
+  verifiedAt: null,
+  evidenceLevel: 'C',
+  userStatus: null,
+  contactedAt: null,
+  followUpAt: null,
+  personalNotes: null,
 });
 
 export function recordToInput(record: CompanyRecord): CompanyInput {

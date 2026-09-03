@@ -132,6 +132,7 @@ export function CompanyForm({
   };
   const techRoles = watch('techRoles');
   const programTypes = watch('programTypes');
+  const openPrograms = watch('openPrograms');
   return (
     <dialog
       ref={editorRef}
@@ -182,7 +183,10 @@ export function CompanyForm({
             <legend>ข้อมูลบริษัท</legend>
             <div className="form-grid">
               <div className="span-2">
-                {textField('companyName', 'ชื่อบริษัท', { required: true })}
+                {textField('companyName', 'ชื่อที่รู้จัก', { required: true })}
+              </div>
+              <div className="span-2">
+                {textField('fullCompanyName', 'ชื่อเต็ม / ชื่อจดทะเบียน')}
               </div>
               {textField('business', 'ธุรกิจ')}
               {textField('thailandLocation', 'ที่ตั้ง/สถานที่ฝึกในไทย')}
@@ -228,6 +232,21 @@ export function CompanyForm({
               <div className="span-2">
                 {textField('internshipPeriod', 'ช่วงฝึกงาน / สหกิจ')}
               </div>
+              <label className="form-field span-2">
+                <span>
+                  โครงการที่เปิดรับ <small>คั่นด้วย ;</small>
+                </span>
+                <input
+                  className="form-control"
+                  value={openPrograms.join('; ')}
+                  onChange={(event) =>
+                    setValue('openPrograms', splitTags(event.target.value), {
+                      shouldDirty: true,
+                    })
+                  }
+                  placeholder="เช่น Tech Internship 2027; Young Talent Program"
+                />
+              </label>
               <label className="form-field span-2">
                 <span>
                   ประเภทโปรแกรม <small>คั่นด้วย ;</small>

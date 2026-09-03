@@ -1,19 +1,19 @@
 export const announcementStatuses = [
-  "เปิดรับ",
-  "Rolling",
-  "ยังไม่เปิดรอบ",
-  "ปิดรับแล้ว",
-  "ไม่พบประกาศปัจจุบัน",
+  'เปิดรับ',
+  'Rolling',
+  'ยังไม่เปิดรอบ',
+  'ปิดรับแล้ว',
+  'ไม่พบประกาศปัจจุบัน',
 ] as const;
 
-export const evidenceLevels = ["A", "B", "C"] as const;
+export const evidenceLevels = ['A', 'B', 'C'] as const;
 export const userStatusValues = [
-  "ไม่รับ",
-  "ติดต่อแล้ว",
-  "กำลังดำเนินการ",
-  "รับแล้ว",
-  "เลยช่วง",
-  "ไม่มี",
+  'ไม่รับ',
+  'ติดต่อแล้ว',
+  'กำลังดำเนินการ',
+  'รับแล้ว',
+  'เลยช่วง',
+  'ไม่มี',
 ] as const;
 
 export type AnnouncementStatus = (typeof announcementStatuses)[number];
@@ -24,6 +24,7 @@ export interface CompanyRecord {
   id: string;
   order: number;
   companyName: string;
+  fullCompanyName: string | null;
   business: string | null;
   techRoles: string[];
   thailandLocation: string | null;
@@ -35,6 +36,7 @@ export interface CompanyRecord {
   applicationDeadline: string | null;
   internshipPeriod: string | null;
   programTypes: string[];
+  openPrograms: string[];
   qualificationsNotes: string | null;
   primarySourceUrl: string | null;
   secondarySourceUrl: string | null;
@@ -46,7 +48,7 @@ export interface CompanyRecord {
   personalNotes: string | null;
 }
 
-export type CompanyInput = Omit<CompanyRecord, "id" | "order">;
+export type CompanyInput = Omit<CompanyRecord, 'id' | 'order'>;
 
 export interface WorkbookSnapshot {
   records: CompanyRecord[];
@@ -54,6 +56,6 @@ export interface WorkbookSnapshot {
   lastModifiedAt: string;
   total: number;
   sourceFileName: string;
-  syncStatus: "synced" | "reading" | "writing" | "locked" | "error";
+  syncStatus: 'synced' | 'reading' | 'writing' | 'locked' | 'error';
   errorMessage?: string;
 }

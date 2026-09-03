@@ -182,7 +182,7 @@ export function CompanyDirectory({
           <thead>
             <tr>
               <Sortable
-                label="บริษัท"
+                label="ชื่อที่รู้จัก"
                 active={sortKey === 'companyName'}
                 direction={sortDirection}
                 onClick={() => sort('companyName')}
@@ -227,7 +227,18 @@ export function CompanyDirectory({
                   >
                     <Highlight text={record.companyName} query={debounced} />
                   </button>
+                  {record.fullCompanyName && (
+                    <small>
+                      <Highlight
+                        text={record.fullCompanyName}
+                        query={debounced}
+                      />
+                    </small>
+                  )}
                   <small>{record.business || 'ไม่ระบุประเภทธุรกิจ'}</small>
+                  {record.openPrograms.length > 0 && (
+                    <small>โครงการ: {record.openPrograms.join(' · ')}</small>
+                  )}
                 </td>
                 {shown.roles && (
                   <td>
@@ -321,6 +332,7 @@ export function CompanyDirectory({
                 <button className="company-name" onClick={() => onOpen(record)}>
                   {record.companyName}
                 </button>
+                {record.fullCompanyName && <p>{record.fullCompanyName}</p>}
                 <p>{record.thailandLocation || 'ไม่ระบุที่ตั้ง'}</p>
               </div>
               <StatusBadge status={record.announcementStatus} />
@@ -331,6 +343,10 @@ export function CompanyDirectory({
               ))}
             </div>
             <dl>
+              <div>
+                <dt>โครงการที่เปิดรับ</dt>
+                <dd>{record.openPrograms.join(', ') || '—'}</dd>
+              </div>
               <div>
                 <dt>Deadline</dt>
                 <dd>{record.applicationDeadline || '—'}</dd>
