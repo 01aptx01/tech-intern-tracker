@@ -20,6 +20,10 @@ const colors = [
   'var(--chart-danger)',
   'var(--chart-neutral)',
 ];
+const chartInitialDimensions = {
+  status: { width: 280, height: 220 },
+  roles: { width: 440, height: 260 },
+} as const;
 type ChartTooltipProps = {
   active?: boolean;
   label?: ReactNode;
@@ -64,7 +68,11 @@ export function StatusCharts({ records }: { records: CompanyRecord[] }) {
           </div>
         </div>
         <div className="chart-body">
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer
+            width="100%"
+            height={220}
+            initialDimension={chartInitialDimensions.status}
+          >
             <PieChart>
               <Pie
                 data={statuses}
@@ -73,6 +81,7 @@ export function StatusCharts({ records }: { records: CompanyRecord[] }) {
                 innerRadius={55}
                 outerRadius={76}
                 paddingAngle={2}
+                isAnimationActive={false}
               />
               <text
                 x="50%"
@@ -128,7 +137,11 @@ export function StatusCharts({ records }: { records: CompanyRecord[] }) {
             <h2>สายงานที่เกี่ยวข้อง</h2>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer
+          width="100%"
+          height={260}
+          initialDimension={chartInitialDimensions.roles}
+        >
           <BarChart
             data={roles}
             layout="vertical"
@@ -147,7 +160,12 @@ export function StatusCharts({ records }: { records: CompanyRecord[] }) {
               content={<ChartTooltip />}
               cursor={{ fill: 'var(--chart-hover)' }}
             />
-            <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
+            <Bar
+              dataKey="count"
+              fill="var(--primary)"
+              radius={[0, 6, 6, 0]}
+              isAnimationActive={false}
+            />
           </BarChart>
         </ResponsiveContainer>
         <p className="sr-only">
