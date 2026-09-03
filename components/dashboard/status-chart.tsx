@@ -10,6 +10,7 @@ import {
   YAxis,
   type PieLabelRenderProps,
 } from 'recharts';
+import type { ReactNode } from 'react';
 import { announcementStatuses, type CompanyRecord } from '@/types/company';
 import { roleCategoryCounts } from '@/lib/companies/analytics';
 
@@ -22,6 +23,30 @@ const colors = [
 ];
 const renderStatusLabel = ({ name, value }: PieLabelRenderProps) =>
   `${String(name)}: ${String(value)}`;
+
+type ChartTooltipProps = {
+  active?: boolean;
+  label?: ReactNode;
+  payload?: ReadonlyArray<{
+    name?: ReactNode;
+    value?: ReactNode;
+    payload?: { category?: ReactNode; name?: ReactNode };
+  }>;
+};
+
+export function ChartTooltip({ active, label, payload }: ChartTooltipProps) {
+  const item = payload?.[0];
+  if (!active || !item) return null;
+  const title =
+    label ?? item.payload?.category ?? item.payload?.name ?? item.name;
+  return (
+    <div className="chart-tooltip" role="tooltip">
+      <strong>{title}</strong>
+      <span>จำนวน {item.value ?? 0} บริษัท</span>
+    </div>
+  );
+}
+
 export function StatusCharts({ records }: { records: CompanyRecord[] }) {
   const statuses = announcementStatuses.map((status, index) => ({
     name: `${index + 1}. ${status}`,
@@ -55,7 +80,7 @@ export function StatusCharts({ records }: { records: CompanyRecord[] }) {
                 label={renderStatusLabel}
                 labelLine
               />
-              <Tooltip />
+              <Tooltip content={<ChartTooltip />} />
             </PieChart>
           </ResponsiveContainer>
           <ol className="chart-legend">
@@ -104,7 +129,10 @@ export function StatusCharts({ records }: { records: CompanyRecord[] }) {
               axisLine={false}
               tickLine={false}
             />
-            <Tooltip />
+            <Tooltip
+              content={<ChartTooltip />}
+              cursor={{ fill: 'var(--chart-hover)' }}
+            />
             <Bar dataKey="count" fill="var(--primary)" radius={[0, 6, 6, 0]} />
           </BarChart>
         </ResponsiveContainer>

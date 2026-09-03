@@ -34,6 +34,7 @@
   --chart-warning: #fbbf24;
   --chart-danger: #fb7185;
   --chart-neutral: #94a3b8;
+  --chart-hover: #1b3448;
   --shadow: 0 24px 64px rgb(0 0 0 / 0.28);
 }
 :root[data-theme='light'] {
@@ -70,6 +71,7 @@
   --chart-warning: #854d0e;
   --chart-danger: #9f1239;
   --chart-neutral: #475569;
+  --chart-hover: #e2e8f0;
   --shadow: 0 24px 64px rgb(15 23 42 / 0.14);
 }
 * {
@@ -842,6 +844,27 @@ a {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
+}
+.chart-tooltip {
+  min-width: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+  background: var(--elevated);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.chart-tooltip strong,
+.chart-tooltip span {
+  display: block;
+}
+.chart-tooltip strong {
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+.chart-tooltip span {
+  color: var(--muted);
+  font-size: 11px;
 }
 .chart-card {
   overflow: hidden;

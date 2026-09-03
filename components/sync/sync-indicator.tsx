@@ -5,7 +5,7 @@ import {
   LoaderCircle,
   LockKeyhole,
 } from 'lucide-react';
-import { useSyncExternalStore } from 'react';
+import { useHydrated } from '@/hooks/use-hydrated';
 import type { WorkbookSnapshot } from '@/types/company';
 
 type Props = {
@@ -15,19 +15,13 @@ type Props = {
   onSync: () => void;
 };
 
-const subscribeToHydration = () => () => undefined;
-
 export function SyncIndicator({
   status,
   lastCheckedAt,
   fileModifiedAt,
   onSync,
 }: Props) {
-  const hydrated = useSyncExternalStore(
-    subscribeToHydration,
-    () => true,
-    () => false,
-  );
+  const hydrated = useHydrated();
   const value =
     status === 'error'
       ? { icon: AlertCircle, label: 'ซิงก์มีปัญหา', className: 'sync-error' }

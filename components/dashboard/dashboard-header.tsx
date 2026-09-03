@@ -3,6 +3,7 @@ import { Download, Moon, Plus, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { SyncIndicator } from '@/components/sync/sync-indicator';
+import { useHydrated } from '@/hooks/use-hydrated';
 import type { WorkbookSnapshot } from '@/types/company';
 
 type Props = {
@@ -20,16 +21,14 @@ export function DashboardHeader({
   onSync,
   onAdd,
 }: Props) {
-  const [dark, setDark] = useState(
-    () =>
-      typeof document === 'undefined' ||
-      document.documentElement.dataset.theme !== 'light',
-  );
+  const hydrated = useHydrated();
+  const [, renderTheme] = useState(0);
+  const dark = !hydrated || document.documentElement.dataset.theme !== 'light';
   const toggle = () => {
     const next = dark ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
-    localStorage.setItem('tracker-theme', next);
-    setDark(!dark);
+    window.localStorage.setItem('tracker-theme', next);
+    renderTheme((version) => version + 1);
   };
   return (
     <header className="app-header">
