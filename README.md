@@ -1,31 +1,28 @@
 # Tech Internship Tracker
 
-เว็บแอปส่วนตัวสำหรับค้นหา คัดกรอง และติดตามการสมัครฝึกงานสาย Tech ในประเทศไทย โดยใช้ไฟล์ Excel เดิมเป็น source of truth ข้อมูลถูกอ่านและเขียนบนเครื่องเท่านั้น ไม่ต้องมีฐานข้อมูลหรือบัญชี cloud
+Local-first internship and cooperative-education tracker for technology roles in Thailand. The application uses one Microsoft Excel workbook as its source of truth: the website reads the workbook, writes validated changes back to it, and watches for changes made externally in Excel.
 
-## ความสามารถหลัก
+> Designed for one person on one Windows machine. There is no authentication, database, cloud storage, or multi-user merge layer.
 
-- Dashboard จากข้อมูลจริง พร้อม KPI, กราฟสถานะ, กลุ่มสายงาน และ deadline 30 วัน
-- ค้นหาภาษาไทย/อังกฤษ, filter หลายเงื่อนไข, sort และ pagination
-- แยก `ชื่อที่รู้จัก`, `ชื่อเต็ม / ชื่อจดทะเบียน` และ `โครงการที่เปิดรับ` เพื่อค้นหาและติดตามได้ชัดเจน
-- เพิ่ม แก้ไข ลบ และ quick edit สถานะ โดยบันทึกกลับ `.xlsx`
-- ซิงก์สองทางกับ Microsoft Excel ขณะ local server ทำงาน พร้อมปุ่มตรวจข้อมูลด้วยตนเอง
-- SHA-256 version conflict protection, owner-lock detection และ atomic file replacement
-- สร้าง backup ก่อนทุก write และเก็บ 20 รุ่นล่าสุด
-- Responsive UI สำหรับ desktop, tablet และ mobile พร้อม light/dark theme
-- รักษา 3 ชีต, table, สูตรสรุป, validation, conditional formatting, hyperlink และคอลัมน์ UUID ที่ซ่อนอยู่
+## Features
 
-## สิ่งที่ต้องมี
+- Thai/English search across company, legal name, open programmes, roles, location, contacts, deadlines, and notes.
+- Filtering, sorting, pagination, responsive table/cards, KPI dashboard, deadline view, and charts.
+- Add, edit, delete, and quick-edit tracking fields from the browser.
+- Two-way local sync: browser → workbook and saved workbook → browser.
+- Automatic file watching through Chokidar, SSE notifications, foreground refresh, and 30-second fallback polling.
+- SHA-256 version checks to prevent overwriting a workbook changed after the page loaded.
+- Excel owner-lock detection, mutex-protected writes, temporary-file verification, rollback-safe replacement, and a backup before every write.
+- Preserves the workbook's three worksheets, table/filter, formulas, validation, conditional formatting, hyperlinks, freeze panes, column widths, and hidden record IDs.
 
-- Windows 10/11 (สภาพแวดล้อมใช้งานหลัก)
-- Node.js 22 หรือใหม่กว่า
-- npm
-- Workbook `.xlsx` ที่มีชีตต่อไปนี้:
-  - `บริษัทฝึกงาน`
-  - `สรุปและลำดับดำเนินการ`
-  - `คำอธิบายและแหล่งข้อมูล`
-- Header ของชีตหลักอยู่แถว 4 และตรงกับ schema 24 คอลัมน์ที่ผู้ใช้เห็น พร้อม `_record_id` ที่ซ่อนอยู่
+## Requirements
 
-## ติดตั้ง
+- Windows 10 or 11 (supported runtime environment).
+- Node.js `>=22.13.0` and npm 10.x.
+- A valid `.xlsx` workbook following the contract below.
+- Microsoft Excel is optional, but must be closed while the website writes to the workbook.
+
+## Quick start
 
 ```powershell
 git clone https://github.com/01aptx01/tech-intern-tracker.git
@@ -34,7 +31,7 @@ npm install
 Copy-Item .env.example .env.local
 ```
 
-แก้ `.env.local` ให้เป็น absolute path ของเครื่อง:
+Edit `.env.local` with absolute Windows paths:
 
 ```dotenv
 EXCEL_FILE_PATH=C:\absolute\path\to\tech_internship_thailand_2569_2570.xlsx
@@ -42,70 +39,117 @@ EXCEL_BACKUP_DIR=C:\absolute\path\to\backups
 APP_ORIGIN=http://127.0.0.1:3000
 ```
 
-ตรวจ configuration และโครงสร้าง workbook:
+Validate the environment and workbook:
 
 ```powershell
 npm run verify:environment
 npm run inspect:workbook
 ```
 
-หากใช้ workbook รุ่นเดิมที่ยังมี header `บริษัท` และยังไม่มีสองคอลัมน์ใหม่ ให้ปิด Excel แล้วรัน migration ครั้งเดียว:
-
-```powershell
-npm run migrate:company-fields
-```
-
-คำสั่งนี้จะสร้าง backup ก่อนแทนไฟล์จริง และจะหยุดทันทีหากโครงสร้างเดิมไม่ตรงกับ schema ที่รองรับ
-
-## เปิดใช้งาน
+Start the local application:
 
 ```powershell
 npm run dev
 ```
 
-เปิด [http://127.0.0.1:3000](http://127.0.0.1:3000) แอป bind เฉพาะ `127.0.0.1` จึงไม่เปิดให้เครื่องอื่นในเครือข่ายเข้าถึง
+Open <http://127.0.0.1:3000>. The server binds to loopback only and is not available to other devices on the network.
 
-สำหรับ production build:
+## Excel workbook contract
+
+The workbook path is configured only on the server; the browser never supplies a path. The file must be a valid `.xlsx` workbook containing these worksheets:
+
+| Worksheet | Required layout |
+| --- | --- |
+| `บริษัทฝึกงาน` | Title/subtitle rows above the data, headers on row 4, records from row 5, main table and filters. |
+| `สรุปและลำดับดำเนินการ` | Formula-driven dashboard summary. |
+| `คำอธิบายและแหล่งข้อมูล` | Status definitions, evidence criteria, and usage notes. |
+
+### Main worksheet columns
+
+Headers must be on row 4. Do not rename, reorder, merge, or delete these columns.
+
+| Excel | Header | Meaning and accepted value |
+| --- | --- | --- |
+| A | `ลำดับ` | Display order. The server controls this when rows are added/deleted. |
+| B | `ชื่อที่รู้จัก` | Common/public company or brand name. Required and unique. |
+| C | `ธุรกิจ` | Business description. |
+| D | `สาย Tech ที่เกี่ยวข้อง` | Semicolon-separated tags, e.g. `SWE; Data; Cloud`. |
+| E | `ที่ตั้ง/สถานที่ฝึกในไทย` | Thailand office or internship location. |
+| F | `รูปแบบทำงาน` | Free text such as `On-site`, `Hybrid`, or `Remote`. |
+| G | `ข้อมูลติดต่อ HR / บริษัท` | Official contact details only. |
+| H | `ลิงก์สมัคร/อาชีพ` | Absolute `http://` or `https://` URL. |
+| I | `สถานะประกาศ` | `เปิดรับ`, `Rolling`, `ยังไม่เปิดรอบ`, `ปิดรับแล้ว`, or `ไม่พบประกาศปัจจุบัน`. |
+| J | `ช่วงเปิดรับ/Deadline` | Human-readable application window. |
+| K | `วันปิดรับ` | Excel date cell, formatted `yyyy-mm-dd`; blank if no deadline. |
+| L | `ช่วงฝึกงาน/สหกิจ` | Human-readable internship or co-op period. |
+| M | `ประเภทโปรแกรม` | Semicolon-separated tags, e.g. `Summer; Co-op; Off-cycle`. |
+| N | `คุณสมบัติ/หมายเหตุ` | Eligibility and programme notes. |
+| O | `แหล่งอ้างอิงหลัก` | Primary careers/internship/application URL. |
+| P | `แหล่งอ้างอิงเสริม` | Supporting company or legal-information URL. |
+| Q | `ตรวจสอบล่าสุด` | Excel date cell for last verification. |
+| R | `ระดับหลักฐาน` | `A`, `B`, or `C`. |
+| S | `สถานะของคุณ` | `ไม่รับ`, `ติดต่อแล้ว`, `กำลังดำเนินการ`, `รับแล้ว`, `เลยช่วง`, `ไม่มี`, or blank. `ไม่รับ` means rejected by the company. |
+| T | `วันที่ติดต่อ` | Excel date cell. |
+| U | `ติดตามครั้งถัดไป` | Excel date cell. |
+| V | `หมายเหตุส่วนตัว` | Private tracking notes; do not commit the workbook. |
+| W | `_record_id` | Hidden UUID v4 technical key. Never edit it or use row number as an ID. |
+| X | `ชื่อเต็ม` | Full registered/legal name, or explicit group/entity description when recruitment is shared. |
+| Y | `โครงการที่เปิดรับ` | Semicolon-separated current or recently verified internship programme names. |
+
+### Excel data rules
+
+- Leave optional cells blank; do not type the string `null`.
+- Separate tag fields with `;`. The application trims whitespace and removes empty or duplicate tags.
+- Store dates as date-only Excel values, not timezone-bearing text. Use `yyyy-mm-dd` for manual edits.
+- Keep the table, headers, formulas, validation, conditional formatting, hidden column W, and hyperlinks intact.
+- Do not insert rows above row 5 or change the header row. Add records through the website whenever possible.
+- Text beginning with `=`, `+`, `-`, or `@` is stored as literal text to prevent formula injection.
+- Company names must be non-empty and unique after case-insensitive Unicode normalization.
+
+### Legacy workbook migration
+
+For an older workbook that still uses `บริษัท` instead of `ชื่อที่รู้จัก`, or lacks X/Y, close Excel and run once:
 
 ```powershell
-npm run build
-npm start
+npm run migrate:company-fields
 ```
 
-## การซิงก์ทำงานอย่างไร
+The migration creates a backup, adds missing fields, initializes `_record_id`, and stops if the workbook does not match the supported structure.
 
-การซิงก์เป็นแบบสองทางระหว่างเว็บที่กำลังเปิดบนเครื่องนี้กับไฟล์ใน `EXCEL_FILE_PATH` ไม่ใช่ cloud sync และทำงานเฉพาะเมื่อ local server กำลังทำงาน
+## Sync model
 
-- **เว็บ → Excel:** การเพิ่ม แก้ไข ลบ หรือเปลี่ยนสถานะจะเขียนลงไฟล์ทันทีหลัง server ตรวจ version, สร้าง backup และยืนยันไฟล์ใหม่สำเร็จ
-- **Excel → เว็บ:** แอปเฝ้าดูไฟล์ตลอดเวลา เมื่อกด Save ใน Microsoft Excel จะตรวจพบการเปลี่ยนแปลงหลังไฟล์นิ่ง แล้วแจ้งหน้าเว็บผ่าน Server-Sent Events
-- **กลไกสำรอง:** หน้าเว็บตรวจข้อมูลซ้ำทุก 30 วินาทีและเมื่อกลับมาเปิด tab เพื่อรองรับกรณี event หลุด
-- **ตรวจด้วยตนเอง:** กด badge สีเขียว `ซิงก์อัตโนมัติ · ตรวจ HH:mm` บน header หรือปุ่ม `ซิงก์ตอนนี้` เพื่ออ่านไฟล์ล่าสุดทันที
+The workbook is the source of truth. Sync is local and requires the server to be running.
 
-เวลา `ตรวจ HH:mm` หมายถึงเวลาที่หน้าเว็บตรวจ Excel สำเร็จล่าสุด ไม่ใช่เวลาที่ไฟล์ถูกแก้ไข วางเมาส์เหนือ badge เพื่อดูเวลาแก้ไขไฟล์ล่าสุด ส่วนข้อมูลที่ยังไม่ได้กด Save ใน Microsoft Excel จะยังไม่ปรากฏบนเว็บ เพราะระบบอ่านจากไฟล์ `.xlsx` ที่บันทึกแล้วเท่านั้น
+1. **Browser → Excel:** validate request, compare SHA-256 version, check Excel lock, create backup, write and re-read a temporary workbook, then replace the original only after verification.
+2. **Excel → browser:** after Excel saves, the watcher waits for the file to stabilize, validates it, updates the snapshot, and notifies the browser through Server-Sent Events.
+3. **Fallback:** the browser refetches every 30 seconds and when the tab becomes visible again.
+4. **Manual check:** use the sync control in the header to read the workbook immediately.
 
-## ใช้งานร่วมกับ Excel
+Unsaved Excel edits are not visible to the website. Save first. If Excel is open, it may create an owner-lock file; website writes are rejected until Excel is closed.
 
-1. เปิดเว็บและแก้ข้อมูลจากหน้า dashboard ได้ตามปกติ รอข้อความ `บันทึกลง Excel แล้ว` ก่อนปิดหน้า
-2. หากแก้จาก Microsoft Excel ให้กด Save หน้าเว็บจะโหลดข้อมูลใหม่อัตโนมัติ หรือกด badge ซิงก์เพื่อตรวจทันที
-3. ก่อนเขียนข้อมูลจากเว็บควรบันทึกและปิด workbook ใน Microsoft Excel เพราะ Excel อาจสร้าง owner-lock file เพื่อป้องกันการเขียนพร้อมกัน
-4. เมื่อเกิด version conflict แอปจะไม่ overwrite ไฟล์ ให้เลือกโหลดข้อมูลล่าสุดและตรวจ draft อีกครั้ง
-5. ดาวน์โหลด workbook ปัจจุบันได้จากปุ่มดาวน์โหลดบน header
+## Safe editing workflow
 
-ทุก record มี UUID ในคอลัมน์ `_record_id` ที่ซ่อนไว้ ระบบสร้างหรือซ่อม UUID ให้อัตโนมัติพร้อม backup โดยไม่ใช้เลขแถวหรือชื่อบริษัทเป็น primary key
+1. Start the server and open the dashboard.
+2. Edit from the website, or edit Excel after saving/closing any website form.
+3. In Excel, press Save and wait for the sync indicator.
+4. Never edit `_record_id`, rename headers, or move the workbook while the server is running.
+5. For a version conflict, load the latest workbook and re-apply the draft manually. Automatic overwrite is never performed.
 
-## Backup และการกู้คืน
+## Backups and restore
 
-ระบบสร้าง backup ก่อน initialize UUID และก่อน add/edit/delete ทุกครั้ง ชื่อไฟล์มี UTC timestamp และเก็บ 20 รุ่นล่าสุดใน `EXCEL_BACKUP_DIR`
+Backups are written to `EXCEL_BACKUP_DIR` before UUID initialization and every add/edit/delete. The application keeps the 20 newest backups and never commits them to Git.
 
-วิธีกู้คืน:
+To restore: stop the server, close Excel, copy the current workbook to a safety location, copy the selected backup over `EXCEL_FILE_PATH`, run `npm run inspect:workbook`, then restart the server.
 
-1. ปิด development/production server
-2. ปิด workbook ใน Microsoft Excel
-3. สำรองไฟล์หลักรุ่นปัจจุบันไว้อีกที่หนึ่ง
-4. คัดลอก backup ที่ต้องการมาทับ path ใน `EXCEL_FILE_PATH`
-5. เปิด server แล้วรัน `npm run inspect:workbook`
+## Error states
 
-## ตรวจสอบคุณภาพ
+- **Workbook not found / invalid schema:** fix `EXCEL_FILE_PATH`, worksheet names, or row-4 headers, then restart.
+- **Workbook locked (`423`):** save and close Excel, then retry. Form drafts remain in the browser.
+- **Version conflict (`409`):** another process changed the workbook; load the latest snapshot before saving.
+- **Backup/write failure:** the original workbook is retained; inspect the operation ID shown by the UI.
+- **Port in use:** stop the process using port 3000 and keep `APP_ORIGIN` aligned with the browser URL.
+
+## Development commands
 
 ```powershell
 npm run lint
@@ -116,46 +160,32 @@ npm run build
 npm run verify
 ```
 
-Integration tests สร้าง workbook จำลองใน temporary directory จึงไม่อ่านหรือเขียน Excel จริง GitHub Actions ทดสอบทั้ง Windows และ Linux และ build บน Ubuntu
+Tests use generated temporary workbooks and never modify the configured personal workbook. GitHub Actions runs lint, type-check, tests, and a Linux production build on Ubuntu and Windows runners.
 
-## Troubleshooting
+## Architecture
 
-### Workbook not found
+```text
+Next.js App Router
+  ├─ Server Components: initial workbook snapshot
+  ├─ Client Components: search, filters, forms, table, charts, sync UX
+  └─ Node.js API routes: guarded workbook mutations and download
 
-ตรวจว่า `EXCEL_FILE_PATH` เป็น absolute path, ลงท้าย `.xlsx` และไม่มี quote เกินมา จากนั้น restart server เพราะ environment variables ถูกอ่านตอนเริ่ม process
+Excel repository
+  ├─ ExcelJS reader/writer and shared Zod validation
+  ├─ SHA-256 snapshots, UUID identity, backup and rollback
+  ├─ Mutex and owner-lock handling
+  └─ Chokidar watcher → event bus → SSE → TanStack Query refresh
+```
 
-### Workbook locked
+The application intentionally does not use a database, authentication, cloud storage, Microsoft Graph, OneDrive sync, or automatic web research.
 
-บันทึกและปิด workbook ใน Microsoft Excel แล้วกด `ลองบันทึกอีกครั้ง` Draft ใน form จะยังไม่หาย ระบบไม่ queue mutation และไม่สร้างแถวซ้ำ การอ่านหรือซิงก์อาจยังทำงานได้ แต่เว็บจะไม่เขียนทับไฟล์ที่มี owner lock
+## Privacy and security
 
-### Header mismatch หรือ Invalid workbook
-
-ตรวจชื่อทั้ง 3 ชีต, header แถว 4 และจำนวนคอลัมน์ ระบบจะหยุดเขียนทันทีเมื่อ schema ไม่ตรงหรือพบ formula error เพื่อป้องกันข้อมูลเสีย
-
-### Version conflict
-
-ไฟล์ถูกเปลี่ยนหลังหน้าเว็บโหลด เลือก “โหลดข้อมูลล่าสุด” แล้วตรวจ draft อีกครั้ง ห้ามแก้ hash หรือบังคับ overwrite
-
-### Port 3000 ถูกใช้งาน
-
-ปิด process เดิมที่ใช้ port 3000 แล้วเริ่มใหม่ ค่า `APP_ORIGIN` ต้องตรงกับ URL ที่ browser เปิดเพื่อให้ mutation ผ่าน origin guard
-
-## ความเป็นส่วนตัวและความปลอดภัย
-
-- Workbook, backup, `.env.local`, personal notes และ contact data ถูก ignore จาก Git
-- ไม่มีการส่ง workbook ไปยัง cloud และ server ไม่ fetch URL ที่อยู่ใน Excel
-- Mutation รับเฉพาะ JSON จาก `APP_ORIGIN` พร้อม custom request header
-- API ไม่รับ file path จาก query, body หรือ header
-- Text ถูกเขียนเป็น literal เพื่อป้องกัน formula injection และ UI ไม่ใช้ `dangerouslySetInnerHTML`
-- External links เปิดด้วย `noopener noreferrer`
-
-## สถาปัตยกรรม
-
-- Next.js App Router + React Server Components สำหรับ initial snapshot
-- TypeScript strict, TanStack Query, React Hook Form + Zod, Recharts
-- ExcelJS adapter ฝั่ง Node.js พร้อม mutex, backup, temporary verification และ rollback-safe replacement
-- Chokidar singleton เฝ้า workbook/owner lock, debounce การเปลี่ยนแปลง และส่ง event ผ่าน SSE
-- Excel เป็น source of truth; ไม่มี database, authentication หรือ cloud storage
+- The workbook remains on the configured local filesystem and is not uploaded by the application.
+- `.env.local`, `.xlsx`, backups, personal notes, logs, and build artifacts are ignored by Git.
+- The server binds to `127.0.0.1`, rejects unexpected mutation origins, requires JSON and a custom request header, and does not accept arbitrary file paths.
+- External links use `target="_blank"` with `rel="noopener noreferrer"`.
+- Do not put passwords, API keys, or sensitive applicant information in the repository.
 
 ## License
 
