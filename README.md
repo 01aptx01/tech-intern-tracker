@@ -7,7 +7,7 @@
 - Dashboard จากข้อมูลจริง พร้อม KPI, กราฟสถานะ, กลุ่มสายงาน และ deadline 30 วัน
 - ค้นหาภาษาไทย/อังกฤษ, filter หลายเงื่อนไข, sort และ pagination
 - เพิ่ม แก้ไข ลบ และ quick edit สถานะ โดยบันทึกกลับ `.xlsx`
-- ตรวจการเปลี่ยนแปลงจาก Microsoft Excel และ refresh หน้าเว็บผ่าน Server-Sent Events
+- ซิงก์สองทางกับ Microsoft Excel ขณะ local server ทำงาน พร้อมปุ่มตรวจข้อมูลด้วยตนเอง
 - SHA-256 version conflict protection, owner-lock detection และ atomic file replacement
 - สร้าง backup ก่อนทุก write และเก็บ 20 รุ่นล่าสุด
 - Responsive UI สำหรับ desktop, tablet และ mobile พร้อม light/dark theme
@@ -63,12 +63,23 @@ npm run build
 npm start
 ```
 
+## การซิงก์ทำงานอย่างไร
+
+การซิงก์เป็นแบบสองทางระหว่างเว็บที่กำลังเปิดบนเครื่องนี้กับไฟล์ใน `EXCEL_FILE_PATH` ไม่ใช่ cloud sync และทำงานเฉพาะเมื่อ local server กำลังทำงาน
+
+- **เว็บ → Excel:** การเพิ่ม แก้ไข ลบ หรือเปลี่ยนสถานะจะเขียนลงไฟล์ทันทีหลัง server ตรวจ version, สร้าง backup และยืนยันไฟล์ใหม่สำเร็จ
+- **Excel → เว็บ:** แอปเฝ้าดูไฟล์ตลอดเวลา เมื่อกด Save ใน Microsoft Excel จะตรวจพบการเปลี่ยนแปลงหลังไฟล์นิ่ง แล้วแจ้งหน้าเว็บผ่าน Server-Sent Events
+- **กลไกสำรอง:** หน้าเว็บตรวจข้อมูลซ้ำทุก 30 วินาทีและเมื่อกลับมาเปิด tab เพื่อรองรับกรณี event หลุด
+- **ตรวจด้วยตนเอง:** กด badge สีเขียว `ซิงก์อัตโนมัติ · ตรวจ HH:mm` บน header หรือปุ่ม `ซิงก์ตอนนี้` เพื่ออ่านไฟล์ล่าสุดทันที
+
+เวลา `ตรวจ HH:mm` หมายถึงเวลาที่หน้าเว็บตรวจ Excel สำเร็จล่าสุด ไม่ใช่เวลาที่ไฟล์ถูกแก้ไข วางเมาส์เหนือ badge เพื่อดูเวลาแก้ไขไฟล์ล่าสุด ส่วนข้อมูลที่ยังไม่ได้กด Save ใน Microsoft Excel จะยังไม่ปรากฏบนเว็บ เพราะระบบอ่านจากไฟล์ `.xlsx` ที่บันทึกแล้วเท่านั้น
+
 ## ใช้งานร่วมกับ Excel
 
-1. เปิดเว็บและแก้ข้อมูลจากหน้า dashboard ได้ตามปกติ
-2. หากต้องการแก้จาก Microsoft Excel ให้บันทึกไฟล์ก่อน หน้าเว็บจะตรวจพบและโหลดข้อมูลใหม่อัตโนมัติ
-3. ก่อนบันทึกจากเว็บควรปิด workbook ใน Microsoft Excel เพราะ Excel สร้าง owner-lock file เพื่อป้องกันการเขียนพร้อมกัน
-4. เมื่อเกิด version conflict แอปจะไม่ overwrite ไฟล์ ให้เลือกโหลดข้อมูลล่าสุดก่อน
+1. เปิดเว็บและแก้ข้อมูลจากหน้า dashboard ได้ตามปกติ รอข้อความ `บันทึกลง Excel แล้ว` ก่อนปิดหน้า
+2. หากแก้จาก Microsoft Excel ให้กด Save หน้าเว็บจะโหลดข้อมูลใหม่อัตโนมัติ หรือกด badge ซิงก์เพื่อตรวจทันที
+3. ก่อนเขียนข้อมูลจากเว็บควรบันทึกและปิด workbook ใน Microsoft Excel เพราะ Excel อาจสร้าง owner-lock file เพื่อป้องกันการเขียนพร้อมกัน
+4. เมื่อเกิด version conflict แอปจะไม่ overwrite ไฟล์ ให้เลือกโหลดข้อมูลล่าสุดและตรวจ draft อีกครั้ง
 5. ดาวน์โหลด workbook ปัจจุบันได้จากปุ่มดาวน์โหลดบน header
 
 ทุก record มี UUID ในคอลัมน์ `_record_id` ที่ซ่อนไว้ ระบบสร้างหรือซ่อม UUID ให้อัตโนมัติพร้อม backup โดยไม่ใช้เลขแถวหรือชื่อบริษัทเป็น primary key
@@ -106,7 +117,7 @@ Integration tests สร้าง workbook จำลองใน temporary direc
 
 ### Workbook locked
 
-บันทึกและปิด workbook ใน Microsoft Excel แล้วกด “ลองบันทึกอีกครั้ง” Draft ใน form จะยังไม่หาย ระบบไม่ queue mutation และไม่สร้างแถวซ้ำ
+บันทึกและปิด workbook ใน Microsoft Excel แล้วกด `ลองบันทึกอีกครั้ง` Draft ใน form จะยังไม่หาย ระบบไม่ queue mutation และไม่สร้างแถวซ้ำ การอ่านหรือซิงก์อาจยังทำงานได้ แต่เว็บจะไม่เขียนทับไฟล์ที่มี owner lock
 
 ### Header mismatch หรือ Invalid workbook
 
@@ -134,7 +145,7 @@ Integration tests สร้าง workbook จำลองใน temporary direc
 - Next.js App Router + React Server Components สำหรับ initial snapshot
 - TypeScript strict, TanStack Query, React Hook Form + Zod, Recharts
 - ExcelJS adapter ฝั่ง Node.js พร้อม mutex, backup, temporary verification และ rollback-safe replacement
-- Chokidar singleton เฝ้า workbook/owner lock และส่ง event ผ่าน SSE
+- Chokidar singleton เฝ้า workbook/owner lock, debounce การเปลี่ยนแปลง และส่ง event ผ่าน SSE
 - Excel เป็น source of truth; ไม่มี database, authentication หรือ cloud storage
 
 ## License

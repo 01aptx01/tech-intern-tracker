@@ -61,12 +61,26 @@ export function DashboardShell({ initialData }: { initialData: CompaniesResponse
     try { const next = await patchCompany(record.id, version, { userStatus: status }); updateCache(next); notify("บันทึกสถานะแล้ว"); }
     catch (error) { handleError(error, recordToInput(record)); }
   };
+  const syncNow = async () => {
+    const result = await companies.refetch({ cancelRefetch: false });
+    if (result.error) { handleError(result.error); return; }
+    if (result.data?.data.syncStatus === "error") {
+      const message = result.data.data.errorMessage ?? "ไม่สามารถอ่านไฟล์ Excel รุ่นล่าสุดได้";
+      setServerError(message);
+      notify(message, "error");
+      return;
+    }
+    setLocked(false);
+    notify("ตรวจและซิงก์ข้อมูลจาก Excel ล่าสุดแล้ว");
+  };
   const retry = () => { if (draftForRetry) void submit(draftForRetry); };
+  const effectiveSyncStatus = companies.isFetching ? "reading" : syncStatus;
+  const lastCheckedAt = new Date(companies.dataUpdatedAt).toISOString();
   return <>
     <a href="#company-directory" className="skip-link">ข้ามไปยังรายชื่อบริษัท</a>
-    <DashboardHeader status={syncStatus} lastModifiedAt={response.meta.lastModifiedAt} onAdd={() => { const draft = emptyCompanyInput(); setDrawer(null); setDraftForRetry(draft); setServerError(null); }} />
-    <main className="app-main"><section className="hero"><div><p className="eyebrow">PERSONAL APPLICATION WORKSPACE</p><h2>วางแผนฝึกงานให้ชัด<br /><span>ก่อนโอกาสจะผ่านไป</span></h2><p>ค้นหา คัดกรอง และติดตามทุกบริษัทจากที่เดียว ข้อมูลทุกการแก้ไขบันทึกกลับ Excel พร้อม backup อัตโนมัติ</p></div><button className="secondary-button" onClick={() => void companies.refetch()} disabled={companies.isFetching}><RefreshCw size={17} className={companies.isFetching ? "spin" : ""} />รีเฟรชข้อมูล</button></section>
-      {syncStatus === "error" && <div className="sync-error-banner" role="alert"><AlertCircle size={19} /><span><strong>ใช้ข้อมูลล่าสุดที่อ่านสำเร็จ</strong>{response.data.errorMessage ? ` · ${response.data.errorMessage}` : " Excel รุ่นล่าสุดอ่านไม่สำเร็จ"}</span><button className="secondary-button" onClick={() => void companies.refetch()}>ลองอ่านใหม่</button></div>}
+    <DashboardHeader status={effectiveSyncStatus} lastCheckedAt={lastCheckedAt} fileModifiedAt={response.meta.lastModifiedAt} onSync={() => void syncNow()} onAdd={() => { const draft = emptyCompanyInput(); setDrawer(null); setDraftForRetry(draft); setServerError(null); }} />
+    <main className="app-main"><section className="hero"><div><p className="eyebrow">PERSONAL APPLICATION WORKSPACE</p><h2>วางแผนฝึกงานให้ชัด<br /><span>ก่อนโอกาสจะผ่านไป</span></h2><p>ค้นหา คัดกรอง และติดตามทุกบริษัทจากที่เดียว ข้อมูลทุกการแก้ไขบันทึกกลับ Excel พร้อม backup อัตโนมัติ</p></div><button className="secondary-button" onClick={() => void syncNow()} disabled={companies.isFetching}><RefreshCw size={17} className={companies.isFetching ? "spin" : ""} />ซิงก์ตอนนี้</button></section>
+      {syncStatus === "error" && <div className="sync-error-banner" role="alert"><AlertCircle size={19} /><span><strong>ใช้ข้อมูลล่าสุดที่อ่านสำเร็จ</strong>{response.data.errorMessage ? ` · ${response.data.errorMessage}` : " Excel รุ่นล่าสุดอ่านไม่สำเร็จ"}</span><button className="secondary-button" onClick={() => void syncNow()}>ลองอ่านใหม่</button></div>}
       {locked && <FileLockAlert onRetry={retry} busy={busy} />}
       <KpiGrid records={records} />
       <CompanyDirectory records={records} mutationsDisabled={syncStatus === "error"} onOpen={(record) => { setDrawer(record); setDraftForRetry(recordToInput(record)); setServerError(null); }} onQuickStatus={quickStatus} />
