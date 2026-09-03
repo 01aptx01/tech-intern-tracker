@@ -871,10 +871,23 @@ a {
 }
 .chart-body {
   display: grid;
-  grid-template-columns: 1.25fr 1fr;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   align-items: center;
 }
+.chart-body > * {
+  min-width: 0;
+}
+.chart-total-value {
+  fill: var(--text);
+  font-size: 24px;
+  font-weight: 800;
+}
+.chart-total-label {
+  fill: var(--muted);
+  font-size: 10px;
+}
 .chart-legend {
+  min-width: 0;
   list-style: none;
   margin: 0;
   padding: 0 16px 0 0;
@@ -885,9 +898,12 @@ a {
 }
 .chart-legend li {
   display: grid;
-  grid-template-columns: 8px 1fr auto;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
+}
+.chart-legend li > span:nth-child(2) {
+  overflow-wrap: anywhere;
 }
 .chart-legend .chart-dot {
   width: 7px;

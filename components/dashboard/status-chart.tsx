@@ -8,7 +8,6 @@ import {
   BarChart,
   XAxis,
   YAxis,
-  type PieLabelRenderProps,
 } from 'recharts';
 import type { ReactNode } from 'react';
 import { announcementStatuses, type CompanyRecord } from '@/types/company';
@@ -21,9 +20,6 @@ const colors = [
   'var(--chart-danger)',
   'var(--chart-neutral)',
 ];
-const renderStatusLabel = ({ name, value }: PieLabelRenderProps) =>
-  `${String(name)}: ${String(value)}`;
-
 type ChartTooltipProps = {
   active?: boolean;
   label?: ReactNode;
@@ -77,9 +73,27 @@ export function StatusCharts({ records }: { records: CompanyRecord[] }) {
                 innerRadius={55}
                 outerRadius={76}
                 paddingAngle={2}
-                label={renderStatusLabel}
-                labelLine
               />
+              <text
+                x="50%"
+                y="46%"
+                className="chart-total-value"
+                textAnchor="middle"
+                dominantBaseline="central"
+                aria-hidden="true"
+              >
+                {records.length}
+              </text>
+              <text
+                x="50%"
+                y="58%"
+                className="chart-total-label"
+                textAnchor="middle"
+                dominantBaseline="central"
+                aria-hidden="true"
+              >
+                บริษัท
+              </text>
               <Tooltip content={<ChartTooltip />} />
             </PieChart>
           </ResponsiveContainer>
