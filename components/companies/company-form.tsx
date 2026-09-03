@@ -4,6 +4,7 @@ import { ExternalLink, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
+import { useDocumentScrollLock } from '@/hooks/use-document-scroll-lock';
 import { companyInputSchema } from '@/lib/companies/schema';
 import { splitTags } from '@/lib/companies/normalize';
 import {
@@ -42,7 +43,8 @@ export function CompanyForm({
   onClose,
 }: Props) {
   const errorRef = useRef<HTMLDivElement>(null);
-  const drawerRef = useRef<HTMLDialogElement>(null);
+  const editorRef = useRef<HTMLDialogElement>(null);
+  useDocumentScrollLock();
   const [deleteMode, setDeleteMode] = useState(false);
   const [confirmationName, setConfirmationName] = useState('');
   type FormInput = z.input<typeof companyInputSchema>;
@@ -68,7 +70,7 @@ export function CompanyForm({
     return () => subscription.unsubscribe();
   }, [onDraftChange, watch]);
   useEffect(() => {
-    const dialog = drawerRef.current;
+    const dialog = editorRef.current;
     const returnFocus =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
@@ -77,7 +79,7 @@ export function CompanyForm({
     if (!dialog.open) dialog.showModal();
     dialog
       .querySelector<HTMLElement>(
-        '.drawer-scroll input, .drawer-scroll select, .drawer-scroll textarea',
+        '.editor-scroll input, .editor-scroll select, .editor-scroll textarea',
       )
       ?.focus();
     return () => {
@@ -132,8 +134,8 @@ export function CompanyForm({
   const programTypes = watch('programTypes');
   return (
     <dialog
-      ref={drawerRef}
-      className="company-drawer"
+      ref={editorRef}
+      className="company-editor"
       aria-modal="true"
       aria-labelledby="company-form-title"
       onCancel={(event) => {
@@ -141,7 +143,7 @@ export function CompanyForm({
         attemptClose();
       }}
     >
-      <header className="drawer-header">
+      <header className="editor-header">
         <div>
           <p className="eyebrow" lang="en">
             EXCEL RECORD
@@ -163,9 +165,9 @@ export function CompanyForm({
           }
           void handleSubmit(onSubmit)(event);
         }}
-        className="drawer-form"
+        className="editor-form"
       >
-        <div className="drawer-scroll">
+        <div className="editor-scroll">
           {serverError && (
             <div
               ref={errorRef}
@@ -376,7 +378,7 @@ export function CompanyForm({
             </div>
           )}
         </div>
-        <footer className="drawer-footer">
+        <footer className="editor-footer">
           <button
             type="button"
             className="secondary-button"

@@ -947,38 +947,45 @@ a {
   text-align: center;
 }
 
-.company-drawer {
+.company-editor {
   position: fixed;
-  inset: 0 0 0 auto;
-  width: min(590px, 100%);
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: min(960px, calc(100% - 48px));
   max-width: none;
-  height: 100vh;
-  height: 100dvh;
-  max-height: 100vh;
-  max-height: 100dvh;
+  height: min(840px, calc(100vh - 48px));
+  height: min(840px, calc(100dvh - 48px));
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   margin: 0;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 16px;
   overflow: hidden;
   flex-direction: column;
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
   overscroll-behavior: contain;
-  animation: slide-in 0.18s ease-out;
+  transform: translate(-50%, -50%);
+  animation: modal-in 0.18s ease-out;
 }
-.company-drawer[open] {
+.company-editor[open] {
   display: flex;
 }
-.company-drawer::backdrop,
+.company-editor::backdrop,
 .dialog-card::backdrop {
   background: rgb(0 0 0 / 0.62);
 }
-html:has(.company-drawer[open]),
-html:has(.dialog-card[open]) {
+html:has(.company-editor[open]),
+html:has(.dialog-card[open]),
+body:has(.company-editor[open]),
+body:has(.dialog-card[open]) {
   overflow: hidden;
+  overscroll-behavior: none;
 }
-.drawer-header {
+.editor-header {
   flex: 0 0 auto;
   min-height: 74px;
   padding: 13px 18px;
@@ -987,7 +994,7 @@ html:has(.dialog-card[open]) {
   justify-content: space-between;
   border-bottom: 1px solid var(--border);
 }
-.drawer-header h2 {
+.editor-header h2 {
   max-width: 470px;
   margin: 2px 0 0;
   overflow: hidden;
@@ -995,14 +1002,14 @@ html:has(.dialog-card[open]) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.drawer-form {
+.editor-form {
   min-height: 0;
   overflow: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
-.drawer-scroll {
+.editor-scroll {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
@@ -1010,12 +1017,12 @@ html:has(.dialog-card[open]) {
   scrollbar-gutter: stable;
   padding: 18px;
 }
-.drawer-scroll fieldset {
+.editor-scroll fieldset {
   margin: 0 0 24px;
   padding: 0;
   border: 0;
 }
-.drawer-scroll legend {
+.editor-scroll legend {
   width: 100%;
   margin-bottom: 12px;
   padding-bottom: 7px;
@@ -1105,7 +1112,7 @@ html:has(.dialog-card[open]) {
 .delete-zone .inline-actions {
   margin-top: 9px;
 }
-.drawer-footer {
+.editor-footer {
   flex: 0 0 auto;
   min-height: 72px;
   padding: 12px 18px;
@@ -1272,10 +1279,16 @@ html:has(.dialog-card[open]) {
   animation: spin 1s linear infinite;
 }
 
-@keyframes slide-in {
+@keyframes modal-in {
   from {
-    transform: translateX(28px);
-    opacity: 0.5;
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.985);
+    opacity: 0;
+  }
+}
+@keyframes modal-sheet-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
   }
 }
 @keyframes pulse {
@@ -1493,14 +1506,25 @@ html:has(.dialog-card[open]) {
   .insight-grid {
     margin-top: 12px;
   }
-  .company-drawer {
+  .company-editor {
+    inset: 0;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    transform: none;
+    animation-name: modal-sheet-in;
   }
-  .drawer-footer {
+  .editor-footer {
     justify-content: center;
     padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
-  .drawer-footer .primary-button {
+  .editor-footer .primary-button {
     flex: 1;
     max-width: 260px;
   }

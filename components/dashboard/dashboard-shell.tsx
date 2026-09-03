@@ -30,9 +30,9 @@ export function DashboardShell({
 }) {
   const queryClient = useQueryClient();
   const companies = useCompanies(initialData);
-  const [drawer, setDrawer] = useState<CompanyRecord | null | undefined>(
-    undefined,
-  );
+  const [editorRecord, setEditorRecord] = useState<
+    CompanyRecord | null | undefined
+  >(undefined);
   const [busy, setBusy] = useState(false);
   const [locked, setLocked] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -78,11 +78,11 @@ export function DashboardShell({
     setBusy(true);
     setServerError(null);
     try {
-      const next = drawer
-        ? await patchCompany(drawer.id, version, input)
+      const next = editorRecord
+        ? await patchCompany(editorRecord.id, version, input)
         : await createCompany(version, input);
       updateCache(next);
-      setDrawer(undefined);
+      setEditorRecord(undefined);
       setLocked(false);
       notify('บันทึกลง Excel แล้ว');
     } catch (error) {
@@ -92,16 +92,20 @@ export function DashboardShell({
     }
   };
   const remove = async (confirmationName: string) => {
-    if (!drawer) return;
+    if (!editorRecord) return;
     setBusy(true);
     setServerError(null);
     try {
-      const next = await removeCompany(drawer.id, version, confirmationName);
+      const next = await removeCompany(
+        editorRecord.id,
+        version,
+        confirmationName,
+      );
       updateCache(next);
-      setDrawer(undefined);
+      setEditorRecord(undefined);
       notify('ลบรายการและบันทึก backup แล้ว');
     } catch (error) {
-      handleError(error, recordToInput(drawer));
+      handleError(error, recordToInput(editorRecord));
     } finally {
       setBusy(false);
     }
@@ -150,7 +154,7 @@ export function DashboardShell({
         onSync={() => void syncNow()}
         onAdd={() => {
           const draft = emptyCompanyInput();
-          setDrawer(null);
+          setEditorRecord(null);
           setDraftForRetry(draft);
           setServerError(null);
         }}
@@ -203,7 +207,7 @@ export function DashboardShell({
           records={records}
           mutationsDisabled={syncStatus === 'error'}
           onOpen={(record) => {
-            setDrawer(record);
+            setEditorRecord(record);
             setDraftForRetry(recordToInput(record));
             setServerError(null);
           }}
@@ -214,17 +218,19 @@ export function DashboardShell({
           <DeadlinePanel
             records={records}
             onOpen={(record) => {
-              setDrawer(record);
+              setEditorRecord(record);
               setDraftForRetry(recordToInput(record));
               setServerError(null);
             }}
           />
         </div>
       </main>
-      {drawer !== undefined && (
+      {editorRecord !== undefined && (
         <CompanyForm
-          record={drawer}
-          initialValues={drawer ? recordToInput(drawer) : emptyCompanyInput()}
+          record={editorRecord}
+          initialValues={
+            editorRecord ? recordToInput(editorRecord) : emptyCompanyInput()
+          }
           busy={busy}
           locked={locked}
           mutationsDisabled={syncStatus === 'error'}
@@ -232,7 +238,7 @@ export function DashboardShell({
           onSubmit={submit}
           onDelete={remove}
           onDraftChange={setDraftForRetry}
-          onClose={() => setDrawer(undefined)}
+          onClose={() => setEditorRecord(undefined)}
         />
       )}
       {conflictDraft && (

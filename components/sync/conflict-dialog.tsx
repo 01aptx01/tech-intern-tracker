@@ -1,6 +1,7 @@
 'use client';
 import { AlertTriangle, Clipboard, RefreshCw, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { useDocumentScrollLock } from '@/hooks/use-document-scroll-lock';
 
 export function ConflictDialog({
   draft,
@@ -13,6 +14,7 @@ export function ConflictDialog({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const primaryActionRef = useRef<HTMLButtonElement>(null);
+  useDocumentScrollLock();
   useEffect(() => {
     const dialog = dialogRef.current;
     const returnFocus =

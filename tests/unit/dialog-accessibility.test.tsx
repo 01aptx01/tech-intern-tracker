@@ -48,6 +48,7 @@ describe('accessible modal lifecycle', () => {
     );
     const dialog = await screen.findByRole('dialog', { name: 'เพิ่มบริษัทใหม่' });
     expect(dialog).toHaveAttribute('open');
+    expect(dialog).toHaveClass('company-editor');
     expect(screen.getByRole('textbox', { name: /ชื่อบริษัท/ })).toBeRequired();
     expect(
       screen.getByRole('combobox', { name: /สถานะประกาศ/ }),
@@ -57,6 +58,26 @@ describe('accessible modal lifecycle', () => {
 
     unmount();
     expect(opener).toHaveFocus();
+  });
+
+  it('locks background scrolling and restores the previous position', async () => {
+    document.documentElement.scrollTop = 240;
+    const { unmount } = render(
+      <CompanyForm
+        {...formProps}
+        record={null}
+        initialValues={emptyCompanyInput()}
+      />,
+    );
+
+    await screen.findByRole('dialog', { name: 'เพิ่มบริษัทใหม่' });
+    expect(document.body.style.position).toBe('fixed');
+    expect(document.body.style.top).toBe('-240px');
+
+    unmount();
+    expect(document.body.style.position).toBe('');
+    expect(document.documentElement.scrollTop).toBe(240);
+    document.documentElement.scrollTop = 0;
   });
 
   it('associates the delete confirmation instruction with its input', async () => {
