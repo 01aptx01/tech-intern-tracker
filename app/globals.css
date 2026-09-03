@@ -952,15 +952,19 @@ a {
   inset: 0 0 0 auto;
   width: min(590px, 100%);
   max-width: none;
-  height: 100%;
-  max-height: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   margin: 0;
   padding: 0;
   border: 0;
+  overflow: hidden;
   flex-direction: column;
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
+  overscroll-behavior: contain;
   animation: slide-in 0.18s ease-out;
 }
 .company-drawer[open] {
@@ -970,7 +974,12 @@ a {
 .dialog-card::backdrop {
   background: rgb(0 0 0 / 0.62);
 }
+html:has(.company-drawer[open]),
+html:has(.dialog-card[open]) {
+  overflow: hidden;
+}
 .drawer-header {
+  flex: 0 0 auto;
   min-height: 74px;
   padding: 13px 18px;
   display: flex;
@@ -988,13 +997,17 @@ a {
 }
 .drawer-form {
   min-height: 0;
+  overflow: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 .drawer-scroll {
+  min-height: 0;
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
   padding: 18px;
 }
 .drawer-scroll fieldset {
@@ -1093,9 +1106,11 @@ a {
   margin-top: 9px;
 }
 .drawer-footer {
+  flex: 0 0 auto;
   min-height: 72px;
   padding: 12px 18px;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   border-top: 1px solid var(--border);
@@ -1481,14 +1496,13 @@ a {
   .company-drawer {
     width: 100%;
   }
-  .drawer-header {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
   .drawer-footer {
-    position: sticky;
-    bottom: 0;
+    justify-content: center;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .drawer-footer .primary-button {
+    flex: 1;
+    max-width: 260px;
   }
   .form-grid {
     grid-template-columns: 1fr;
