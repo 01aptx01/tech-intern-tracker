@@ -2,11 +2,11 @@
 
 ## Executive conclusion
 
-**Original audit result at commit `01f16ebc`: Does not conform to WCAG 2.2 Level AA within the audited scope.**
+**Original audit result at commit `01f16ebc`: Does not conform to WCAG 2.2 Level AA within the audited scope.** The remediated interface was re-audited on 4 September 2026 at current `main` commit `adae02f`.
 
 The review found **16 confirmed issues** and **1 manual-verification item**. Six confirmed issues are High severity, nine are Medium, and one is Low. The largest barriers are the light-theme color system, low-contrast control boundaries, invisible keyboard focus on filter chips, incomplete modal focus management, and controls that lose their accessible name or functionality at the mobile/reflow breakpoint.
 
-**Remediation branch status:** all 17 numbered findings have been addressed in source on `fix/wcag-a11y-remediation`. The full automated verification suite passes, including source linting, strict type checking, 30 unit/integration tests, contrast-token assertions, modal accessibility regression tests, and a production build. Full WCAG conformance remains **not determined** until the manual browser and assistive-technology checks listed under Limitations are completed.
+**Remediation status:** all 17 numbered findings remain addressed in the `main` branch. The full automated verification suite passes, including source linting, strict type checking, 36 unit/integration tests, contrast-token assertions, modal accessibility regression tests, and a production build. A live dashboard smoke check at `http://127.0.0.1:3000/` also rendered the real sync indicator, search, KPI cards, filters, and company directory without a new regression. Full WCAG conformance remains **not determined** until the manual browser and assistive-technology checks listed under Limitations are completed.
 
 This is a focused interface audit and remediation record, not a legal-compliance determination.
 
@@ -14,12 +14,12 @@ This is a focused interface audit and remediation record, not a legal-compliance
 
 - Product: Tech Internship Tracker
 - Audited commit: `01f16ebca55dac24c8e8362410b859943523b11f`
-- Audit date: 3 September 2026
+- Audit date: 4 September 2026 (re-audit of current `main`)
 - Standard: [WCAG 2.2](https://www.w3.org/TR/WCAG22/), Levels A and AA
 - Primary view: `http://127.0.0.1:3000/`
 - States inspected from source: default dashboard, dark/light themes, `<768px` responsive state, filters, data table/cards, company drawer, conflict dialog, lock/error alerts, toast notifications, loading and empty states
 - Workflows reviewed: search, filter, sort, pagination, add/edit/delete entry, quick status update, manual sync and conflict handling
-- Evidence: React/TypeScript source, CSS tokens and breakpoints, server-rendered HTML snapshot, calculated sRGB contrast ratios, component regression tests, and headless Chromium visual snapshots at 500×900 and 1440×1000
+- Evidence: React/TypeScript source, CSS tokens and breakpoints, accessibility-tree snapshot and live screenshot from the local dashboard, calculated sRGB contrast ratios, component regression tests, and headless Chromium visual snapshots at 500×900 and 1440×1000
 - Data safety: no Excel mutation was performed
 
 ### Limitations
@@ -64,7 +64,7 @@ Completed on 3 September 2026:
 
 - `npm run lint` — passed with no reported issues.
 - `npm run typecheck` — passed under the project's strict TypeScript configuration.
-- `npm test` — 10 test files and 30 tests passed.
+- `npm test` — 12 test files and 36 tests passed.
 - `npm run build` — Next.js 16.3.4 production build passed.
 - Runtime smoke check — `/` returned HTTP 200 and `/api/health` reported `status: ok`, a readable workbook, and no workbook lock.
 - Headless Chromium visual check — the 500px responsive view retained sync, theme, download, and add actions without page-level horizontal clipping; the 1440px dashboard retained its information hierarchy and table layout.
