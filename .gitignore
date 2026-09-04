@@ -32,11 +32,13 @@ yarn-error.log*
 !.env.example
 *.xlsx
 *.xls
+!templates/tech-internship-tracker-template.xlsx
 ~$*.xlsx
 *.tmp.xlsx
 *.rollback.xlsx
 *.tsbuildinfo
 backups/
+.backups/
 data/
 
 # deployment and generated files

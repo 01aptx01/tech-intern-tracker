@@ -54,6 +54,35 @@ npm run dev
 
 Open <http://127.0.0.1:3000>. The server binds to loopback only and is not available to other devices on the network.
 
+## Starter workbook template
+
+Use the checked-in [tech-internship-tracker-template.xlsx](./templates/tech-internship-tracker-template.xlsx) when creating a new personal workbook. It is intentionally small and safe to copy: it contains four clearly labelled mock companies, not real applicant data. Replace the mock rows with your own records or point `EXCEL_FILE_PATH` at an existing workbook that follows the same contract.
+
+The template includes:
+
+- all three required worksheets and the row-4 header layout;
+- the complete 25-column schema (`A:Y`), including hidden `_record_id` values;
+- typed date cells, filters, frozen panes, table formatting, status/evidence dropdowns, and conditional formatting;
+- formula-driven summary counts and role breakdowns; and
+- example URLs and notes that demonstrate the expected shape without pretending to be live openings.
+
+Recommended setup:
+
+1. Copy the template outside the repository (for example, to a private `data` folder).
+2. Rename it if desired, then set `EXCEL_FILE_PATH` and `EXCEL_BACKUP_DIR` in `.env.local`.
+3. Keep the three worksheet names, row 4, headers, and `_record_id` column unchanged.
+4. Delete or replace mock rows before adding personal application tracking data.
+
+The web app is the safest place to add, edit, or delete rows because it preserves IDs, formulas, validations, formatting, and backups automatically.
+
+## Interface preview
+
+This screenshot is captured from the running local dashboard at `http://127.0.0.1:3000` and shows the real search, sync indicator, KPI cards, and company directory UI:
+
+![Tech Internship Tracker dashboard](./docs/screenshots/dashboard.png)
+
+The screenshot is a visual reference only; all numbers shown in the interface are calculated from the configured workbook at runtime.
+
 ## Excel workbook contract
 
 The workbook path is configured only on the server; the browser never supplies a path. The file must be a valid `.xlsx` workbook containing these worksheets:
