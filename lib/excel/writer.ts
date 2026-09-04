@@ -22,6 +22,23 @@ import { loadWorkbookState } from './reader';
 
 type MutableTableModel = { tableRef?: string; autoFilterRef?: string };
 
+const announcementStatuses = [
+  'เปิดรับ',
+  'Rolling',
+  'ยังไม่เปิดรอบ',
+  'ปิดรับแล้ว',
+  'ไม่พบประกาศปัจจุบัน',
+];
+const evidenceLevels = ['A', 'B', 'C'];
+const userStatuses = [
+  'ไม่รับ',
+  'ติดต่อแล้ว',
+  'กำลังดำเนินการ',
+  'รับแล้ว',
+  'เลยช่วง',
+  'ไม่มี',
+];
+
 function cloneValue<T>(value: T): T {
   return value === undefined ? value : structuredClone(value);
 }
@@ -109,6 +126,58 @@ function trimDataValidations(worksheet: ExcelJS.Worksheet, lastRow: number) {
     if (!validation?.type || (row >= DATA_START_ROW && row > lastRow))
       delete validations[address];
   }
+}
+
+function setDataValidations(
+  worksheet: ExcelJS.Worksheet,
+  lastRow: number,
+) {
+  const dataValidations = (
+    worksheet as unknown as {
+      dataValidations: {
+        model: Record<string, unknown>;
+        add: (address: string, validation: ExcelJS.DataValidation) => void;
+      };
+    }
+  ).dataValidations;
+  // Older exporter output can be parsed by ExcelJS as one `any` validation per
+  // cell. Replace the model rather than accumulating overlapping rules.
+  dataValidations.model = {};
+  const end = Math.max(lastRow, DATA_START_ROW);
+  const definitions = [
+    {
+      column: 'I',
+      values: announcementStatuses,
+      title: 'สถานะไม่ถูกต้อง',
+      error: 'เลือกสถานะประกาศจากรายการที่กำหนดเท่านั้น',
+      allowBlank: false,
+    },
+    {
+      column: 'R',
+      values: evidenceLevels,
+      title: 'ระดับหลักฐานไม่ถูกต้อง',
+      error: 'เลือก A, B หรือ C',
+      allowBlank: false,
+    },
+    {
+      column: 'S',
+      values: userStatuses,
+      title: 'สถานะผู้สมัครไม่ถูกต้อง',
+      error: 'เลือกสถานะของคุณจากรายการที่กำหนด หรือปล่อยว่าง',
+      allowBlank: true,
+    },
+  ];
+  definitions.forEach(({ column, values, title, error, allowBlank }) =>
+    dataValidations.add(`${column}${DATA_START_ROW}:${column}${end}`, {
+      type: 'list',
+      allowBlank,
+      formulae: [`"${values.join(',')}"`],
+      showErrorMessage: true,
+      errorStyle: 'stop',
+      errorTitle: title,
+      error,
+    }),
+  );
 }
 
 function updateTableRange(worksheet: ExcelJS.Worksheet, lastRow: number) {
@@ -247,11 +316,28 @@ export function prepareTechnicalIds(state: WorkbookState) {
   const { worksheet, records, rowById } = state;
   worksheet.getCell(HEADER_ROW, RECORD_ID_COLUMN).value = TECHNICAL_HEADER;
   worksheet.getColumn(RECORD_ID_COLUMN).hidden = true;
+  worksheet.views = [
+    {
+      state: 'frozen',
+      xSplit: 2,
+      ySplit: 4,
+      topLeftCell: 'C5',
+      activeCell: 'C5',
+    },
+  ];
   records.forEach(
-    (record) =>
-      (worksheet.getCell(rowById.get(record.id)!, RECORD_ID_COLUMN).value =
-        record.id),
+    (record) => {
+      const rowNumber = rowById.get(record.id)!;
+      worksheet.getCell(rowNumber, RECORD_ID_COLUMN).value = record.id;
+      writeRecordCells(worksheet, rowNumber, record, [
+        'applicationUrl',
+        'primarySourceUrl',
+        'secondarySourceUrl',
+      ]);
+    },
   );
+  if (state.needsValidationRepair)
+    setDataValidations(worksheet, state.lastDataRow);
 }
 
 export function preparePatch(

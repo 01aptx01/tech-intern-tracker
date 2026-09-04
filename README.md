@@ -13,7 +13,7 @@ Local-first internship and cooperative-education tracker for technology roles in
 - Automatic file watching through Chokidar, SSE notifications, foreground refresh, and 30-second fallback polling.
 - SHA-256 version checks to prevent overwriting a workbook changed after the page loaded.
 - Excel owner-lock detection, mutex-protected writes, temporary-file verification, rollback-safe replacement, and a backup before every write.
-- Preserves the workbook's three worksheets, table/filter, formulas, validation, conditional formatting, hyperlinks, freeze panes, column widths, and hidden record IDs.
+- Preserves the workbook's three worksheets, table/filter, formulas, validation, conditional formatting, date formats, column widths, and stable record IDs. The reader also normalizes OOXML emitted by Excel-compatible exporters that ExcelJS cannot parse directly.
 
 ## Requirements
 
@@ -101,7 +101,7 @@ Headers must be on row 4. Do not rename, reorder, merge, or delete these columns
 - Leave optional cells blank; do not type the string `null`.
 - Separate tag fields with `;`. The application trims whitespace and removes empty or duplicate tags.
 - Store dates as date-only Excel values, not timezone-bearing text. Use `yyyy-mm-dd` for manual edits.
-- Keep the table, headers, formulas, validation, conditional formatting, hidden column W, and hyperlinks intact.
+- Keep the table, headers, formulas, validation, conditional formatting, and column W technical key intact. The app repairs a zero-width W column to a real hidden column before its first write. URLs must remain absolute `http://` or `https://` values; the web UI renders them as safe external links.
 - Do not insert rows above row 5 or change the header row. Add records through the website whenever possible.
 - Text beginning with `=`, `+`, `-`, or `@` is stored as literal text to prevent formula injection.
 - Company names must be non-empty and unique after case-insensitive Unicode normalization.
@@ -178,6 +178,10 @@ Excel repository
 ```
 
 The application intentionally does not use a database, authentication, cloud storage, Microsoft Graph, OneDrive sync, or automatic web research.
+
+### Workbook exporter compatibility
+
+The current normalized workbook was produced by an Excel-compatible exporter that uses prefixed OOXML namespaces and package-absolute relationship targets. The server detects this format and normalizes it in memory before passing it to ExcelJS; the original workbook bytes are not rewritten during reads. A first application write may persist ExcelJS-compatible OOXML and repair the technical ID column's hidden state. Freeze-pane metadata and native hyperlink relationships are exporter-specific, so verify those presentation details in Microsoft Excel after a write.
 
 ## Privacy and security
 

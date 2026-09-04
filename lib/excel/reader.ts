@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 import { AppError } from '@/lib/api/errors';
 import {
   cleanText,
@@ -32,7 +33,72 @@ export interface WorkbookState {
   lastModifiedAt: string;
   sourceFileName: string;
   needsIdRepair: boolean;
+  needsValidationRepair: boolean;
   lastDataRow: number;
+}
+
+/**
+ * Some Excel-compatible exporters emit OOXML with a prefixed spreadsheet
+ * namespace and package-absolute relationship targets. ExcelJS expects the
+ * canonical default namespace and package-relative targets. Normalize only
+ * that exporter variation in memory; the source workbook bytes are never
+ * changed by the reader.
+ */
+async function normalizeExporterOoxml(bytes: Buffer): Promise<Buffer> {
+  const zip = await JSZip.loadAsync(bytes);
+
+  for (const name of Object.keys(zip.files)) {
+    if (!name.endsWith('.xml') && !name.endsWith('.rels')) continue;
+    const entry = zip.files[name];
+    if (entry.dir) continue;
+
+    let xml = await entry.async('string');
+    if (name.endsWith('.xml')) {
+      xml = xml
+        .replaceAll('</x:', '</')
+        .replaceAll('<x:', '<')
+        .replaceAll(
+          'xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',
+          'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',
+        );
+    }
+
+    if (name.endsWith('.rels')) {
+      const ownerPath = name
+        .replace(/\/_rels\/([^/]+)$/, '/$1')
+        .replace(/^_rels\/\.rels$/, '');
+      const sourceDirectory = path.posix.dirname(ownerPath);
+      xml = xml.replace(
+        /Target="\/xl\/([^"]+)"/g,
+        (_match, target: string) =>
+          `Target="${path.posix.relative(sourceDirectory, `xl/${target}`)}"`,
+      );
+    }
+
+    zip.file(name, xml);
+  }
+
+  return zip.generateAsync({ type: 'nodebuffer' });
+}
+
+async function loadExcelWorkbook(bytes: Buffer): Promise<{
+  workbook: ExcelJS.Workbook;
+  normalized: boolean;
+}> {
+  const workbook = new ExcelJS.Workbook();
+  try {
+    await workbook.xlsx.load(bytes as never);
+    return { workbook, normalized: false };
+  } catch (firstError) {
+    try {
+      const normalizedBytes = await normalizeExporterOoxml(bytes);
+      const normalizedWorkbook = new ExcelJS.Workbook();
+      await normalizedWorkbook.xlsx.load(normalizedBytes as never);
+      return { workbook: normalizedWorkbook, normalized: true };
+    } catch {
+      throw firstError;
+    }
+  }
 }
 
 const uuidPattern =
@@ -83,6 +149,30 @@ function fieldErrorMessage(
   return `ข้อมูลแถว ${row} ไม่ถูกต้อง: ${issues.map((issue) => `${String(issue.path[0])}: ${issue.message}`).join(', ')}`;
 }
 
+function hasFunctionalDataValidations(worksheet: ExcelJS.Worksheet) {
+  // Do not force a migration for legacy fixtures/workbooks that simply do not
+  // have a validation on a column yet. Do repair exporter output that contains
+  // an explicit but non-functional `any` validation.
+  return [9, 18, 19].every((column) => {
+    const validation = worksheet.getCell(DATA_START_ROW, column).dataValidation;
+    return !validation || validation.type === 'list';
+  });
+}
+
+function hasRequiredViewState(worksheet: ExcelJS.Worksheet) {
+  const view = worksheet.views?.find((item) => item.state === 'frozen');
+  const splitView = view as (typeof view & { xSplit?: number; ySplit?: number }) | undefined;
+  return splitView?.xSplit === 2 && splitView.ySplit === 4;
+}
+
+function hasNativeSourceHyperlinks(worksheet: ExcelJS.Worksheet) {
+  return [8, 15, 16].every((column) => {
+    const value = worksheet.getCell(DATA_START_ROW, column).value;
+    return value === null ||
+      (typeof value === 'object' && 'hyperlink' in value && Boolean(value.hyperlink));
+  });
+}
+
 export async function loadWorkbookState(
   fileOverride?: string,
 ): Promise<WorkbookState> {
@@ -92,9 +182,12 @@ export async function loadWorkbookState(
     fs.stat(filePath),
   ]);
 
-  const workbook = new ExcelJS.Workbook();
+  let workbook: ExcelJS.Workbook;
+  let normalized = false;
   try {
-    await workbook.xlsx.load(bytes as never);
+    const loaded = await loadExcelWorkbook(bytes);
+    workbook = loaded.workbook;
+    normalized = loaded.normalized;
   } catch {
     throw new AppError(
       'INVALID_WORKBOOK',
@@ -113,7 +206,21 @@ export async function loadWorkbookState(
   const records: CompanyRecord[] = [];
   const rowById = new Map<string, number>();
   const companyNames = new Set<string>();
-  let needsIdRepair = !hasRecordIdHeader;
+  // A zero-width technical column is visually hidden in the latest normalized
+  // workbook, but ExcelJS still reports `hidden: false`. Treat that as a
+  // one-time technical repair so the first app write persists a real hidden
+  // column and save verification remains deterministic.
+  let needsIdRepair =
+    !hasRecordIdHeader || !worksheet.getColumn(RECORD_ID_COLUMN).hidden;
+  const needsValidationRepair =
+    normalized && !hasFunctionalDataValidations(worksheet);
+  if (normalized) {
+    needsIdRepair =
+      needsIdRepair ||
+      needsValidationRepair ||
+      !hasRequiredViewState(worksheet) ||
+      !hasNativeSourceHyperlinks(worksheet);
+  }
   let lastDataRow = DATA_START_ROW - 1;
 
   for (
@@ -200,6 +307,7 @@ export async function loadWorkbookState(
     lastModifiedAt: stat.mtime.toISOString(),
     sourceFileName: path.basename(filePath),
     needsIdRepair,
+    needsValidationRepair,
     lastDataRow,
   };
 }
