@@ -97,23 +97,29 @@ Comprehensive filter popover supporting simultaneous filtering across announceme
 
 ![Advanced filter controls](./docs/screenshots/03-advanced-filters.png)
 
-### 4. Company record and tracking editor
+### 4. Read-only company detail dossier
 
-Detailed modal dialog for adding and editing company records. Validates inputs with Zod, manages technical record keys, updates private notes, and automatically triggers workbook backups before writes.
+Centered modal dialog presenting a clean, structured, read-only dossier for any company clicked from the directory table. It organizes key details into focused cards: top metadata and status badges, opportunity timeline & deadline countdowns, program qualification requirements, corporate profile, contact channels, and personal tracking notes. Clicking the **แก้ไขข้อมูล (Edit)** button transitions smoothly into the editing form.
 
-![Company detail and editor modal](./docs/screenshots/04-company-editor.png)
+![Company detail dossier view](./docs/screenshots/04-company-detail-modal.png)
 
-### 5. Visual analytics and role distribution
+### 5. Company tracking editor and creator
+
+Comprehensive editor form accessible either by clicking **แก้ไขข้อมูล (Edit)** from the dossier view or via the **+ เพิ่มบริษัท (Add Company)** header action. Features field validations, date pickers, multi-select tag inputs, direct Excel column mappings, and a **← ดูข้อมูล** button to return to the read-only view.
+
+![Company editor and tracking form](./docs/screenshots/05-company-editor.png)
+
+### 6. Visual analytics and role distribution
 
 Visual charts displaying the distribution of company announcement statuses (donut chart) and the most prevalent tech roles across all recorded companies (horizontal bar chart).
 
-![Visual analytics charts](./docs/screenshots/05-analytics-charts.png)
+![Visual analytics charts](./docs/screenshots/06-analytics-charts.png)
 
-### 6. Impending deadline tracking
+### 7. Impending deadline tracking
 
 Priority deadline panel showing upcoming application closing dates within the next 30 days, complete with countdown indicators and quick-navigation links to company details.
 
-![Impending application deadlines panel](./docs/screenshots/06-deadline-tracker.png)
+![Impending application deadlines panel](./docs/screenshots/07-deadline-tracker.png)
 
 ## Excel workbook contract
 

@@ -3,7 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  Pencil,
+  Eye,
   Save,
   Search,
 } from 'lucide-react';
@@ -302,9 +302,10 @@ export function CompanyDirectory({
                     <button
                       className="icon-button"
                       onClick={() => onOpen(record)}
-                      aria-label={`แก้ไข ${record.companyName}`}
+                      aria-label={`ดูรายละเอียด ${record.companyName}`}
+                      title="ดูรายละเอียด"
                     >
-                      <Pencil size={16} />
+                      <Eye size={16} />
                     </button>
                     {record.applicationUrl && (
                       <a

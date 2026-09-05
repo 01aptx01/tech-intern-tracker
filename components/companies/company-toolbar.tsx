@@ -1,6 +1,6 @@
 'use client';
 import { Check, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   announcementStatuses,
   evidenceLevels,
@@ -34,6 +34,9 @@ export function CompanyToolbar({
   total,
 }: Props) {
   const searchRef = useRef<HTMLInputElement>(null);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const [openUpward, setOpenUpward] = useState(false);
+
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       const target = event.target;
@@ -54,6 +57,40 @@ export function CompanyToolbar({
     window.addEventListener('keydown', listener);
     return () => window.removeEventListener('keydown', listener);
   }, []);
+
+  const updatePlacement = useCallback(() => {
+    if (!detailsRef.current?.open) return;
+    const rect = detailsRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    // If space below is tight and more room exists above, open upward to avoid page overflow
+    setOpenUpward(spaceBelow < 460 && spaceAbove > spaceBelow);
+  }, []);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (
+        detailsRef.current?.open &&
+        !detailsRef.current.contains(event.target as Node)
+      ) {
+        detailsRef.current.open = false;
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && detailsRef.current?.open) {
+        detailsRef.current.open = false;
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', updatePlacement);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', updatePlacement);
+    };
+  }, [updatePlacement]);
+
   const toggle = <K extends keyof CompanyFilters>(key: K, value: string) => {
     const current = filters[key] as string[];
     onFilters({
@@ -101,12 +138,16 @@ export function CompanyToolbar({
           />
           <kbd aria-hidden="true">Ctrl K</kbd>
         </label>
-        <details className="filter-menu">
+        <details
+          ref={detailsRef}
+          className="filter-menu"
+          onToggle={updatePlacement}
+        >
           <summary>
             <Filter size={17} />
             ตัวกรอง{activeCount > 0 && <span>{activeCount}</span>}
           </summary>
-          <div className="filter-popover">
+          <div className={`filter-popover${openUpward ? ' open-up' : ''}`}>
             <FilterGroup
               title="สถานะประกาศ"
               values={announcementStatuses}
@@ -201,13 +242,64 @@ function FilterGroup({
   selected: readonly string[];
   onToggle: (value: string) => void;
 }) {
+  const [filterText, setFilterText] = useState('');
+  const hasSearch = values.length > 8;
+
+  const filteredValues = useMemo(() => {
+    if (!filterText.trim()) return values;
+    const q = filterText.toLowerCase().trim();
+    return values.filter((v) => v.toLowerCase().includes(q));
+  }, [values, filterText]);
+
+  const displayedValues = useMemo(() => {
+    if (filterText.trim()) {
+      return filteredValues.slice(0, 40);
+    }
+    if (values.length > 12) {
+      const selectedSet = new Set(selected);
+      const selectedItems = values.filter((v) => selectedSet.has(v));
+      const unselectedItems = values.filter((v) => !selectedSet.has(v));
+      return [
+        ...selectedItems,
+        ...unselectedItems.slice(0, Math.max(0, 12 - selectedItems.length)),
+      ];
+    }
+    return values;
+  }, [values, filteredValues, filterText, selected]);
+
   if (!values.length) return null;
+
   return (
     <fieldset className="filter-group">
-      <legend>{title}</legend>
-      <div>
-        {values.map((value) => (
-          <label key={value}>
+      <div className="filter-group-header">
+        <legend>{title}</legend>
+        {selected.length > 0 && (
+          <span className="filter-group-count">{selected.length}</span>
+        )}
+      </div>
+      {hasSearch && (
+        <div className="filter-group-search">
+          <input
+            type="text"
+            placeholder={`ค้นหา ${title}...`}
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            aria-label={`ค้นหา ${title}`}
+          />
+          {filterText && (
+            <button
+              type="button"
+              onClick={() => setFilterText('')}
+              aria-label="ล้างการค้นหา"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
+      <div className="filter-group-items">
+        {displayedValues.map((value) => (
+          <label key={value} title={value}>
             <input
               type="checkbox"
               checked={selected.includes(value)}
@@ -215,11 +307,19 @@ function FilterGroup({
             />
             <span>
               <Check size={13} aria-hidden="true" />
-              {value}
+              <span className="filter-label-text">{value}</span>
             </span>
           </label>
         ))}
+        {displayedValues.length === 0 && (
+          <p className="filter-empty-text">ไม่พบรายการ</p>
+        )}
       </div>
+      {hasSearch && !filterText && values.length > displayedValues.length && (
+        <p className="filter-hint">
+          แสดง {displayedValues.length} จาก {values.length} รายการ (พิมพ์ค้นหาเพื่อดูเพิ่มเติม)
+        </p>
+      )}
     </fieldset>
   );
 }
