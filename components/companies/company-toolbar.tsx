@@ -279,6 +279,7 @@ function FilterGroup({
       </div>
       {hasSearch && (
         <div className="filter-group-search">
+          <Search size={13} className="filter-search-icon" aria-hidden="true" />
           <input
             type="text"
             placeholder={`ค้นหา ${title}...`}
@@ -299,15 +300,15 @@ function FilterGroup({
       )}
       <div className="filter-group-items">
         {displayedValues.map((value) => (
-          <label key={value} title={value}>
+          <label key={value} title={value} className="filter-chip-label">
             <input
               type="checkbox"
               checked={selected.includes(value)}
               onChange={() => onToggle(value)}
             />
-            <span>
-              <Check size={13} aria-hidden="true" />
-              <span className="filter-label-text">{value}</span>
+            <span className="filter-chip">
+              <Check size={13} className="filter-chip-check" aria-hidden="true" />
+              <span className="filter-chip-text">{value}</span>
             </span>
           </label>
         ))}

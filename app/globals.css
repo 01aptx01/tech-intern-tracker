@@ -618,13 +618,21 @@ a {
 }
 .filter-group-search {
   position: relative;
+  display: flex;
+  align-items: center;
   margin-bottom: 8px;
   width: 100%;
+}
+.filter-search-icon {
+  position: absolute;
+  left: 9px;
+  color: var(--muted);
+  pointer-events: none;
 }
 .filter-group-search input {
   width: 100%;
   height: 32px;
-  padding: 0 24px 0 9px;
+  padding: 0 24px 0 28px;
   border: 1px solid var(--control-border);
   border-radius: 6px;
   background: color-mix(in srgb, var(--bg) 60%, var(--surface));
@@ -642,8 +650,6 @@ a {
 .filter-group-search button {
   position: absolute;
   right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
   width: 22px;
   height: 22px;
   border: 0;
@@ -689,46 +695,57 @@ a {
   color: var(--muted);
   line-height: 1.3;
 }
-.filter-group label {
-  min-height: 44px;
+.filter-chip-label {
+  cursor: pointer;
   display: inline-flex;
   align-items: stretch;
+  user-select: none;
 }
-.filter-group input[type='checkbox'] {
+.filter-chip-label input[type='checkbox'] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
-.filter-group span {
-  min-height: 44px;
-  padding: 5px 8px;
+.filter-chip {
+  min-height: 32px;
+  padding: 4px 10px;
   border: 1px solid var(--control-border);
-  border-radius: 7px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 70%, var(--elevated));
+  transition: all 0.15s ease;
 }
-.filter-label-text {
-  max-width: 200px;
+.filter-chip:hover {
+  border-color: var(--primary);
+  background: var(--elevated);
+}
+.filter-chip-check {
+  display: none;
+  flex-shrink: 0;
+}
+.filter-chip-label input[type='checkbox']:focus-visible + .filter-chip {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.filter-chip-label input[type='checkbox']:checked + .filter-chip {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 15%, var(--surface));
+  color: var(--primary-strong, var(--primary));
+  font-weight: 600;
+}
+.filter-chip-label input[type='checkbox']:checked + .filter-chip .filter-chip-check {
+  display: inline-block;
+}
+.filter-chip-text {
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.filter-group span svg {
-  visibility: hidden;
-}
-.filter-group input[type='checkbox']:focus-visible + span {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-.filter-group input[type='checkbox']:checked + span svg {
-  visibility: visible;
-}
-.filter-group input[type='checkbox']:checked + span {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
 }
 .filter-select {
   display: flex;
