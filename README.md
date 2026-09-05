@@ -77,11 +77,43 @@ The web app is the safest place to add, edit, or delete rows because it preserve
 
 ## Interface preview
 
-This screenshot is captured from the running local dashboard at `http://127.0.0.1:3000` and shows the real search, sync indicator, KPI cards, and company directory UI:
+Screenshots captured directly from the running local dashboard at `http://127.0.0.1:3000`. All interface statistics and records are calculated live from the configured workbook.
 
-![Tech Internship Tracker dashboard](./docs/screenshots/dashboard.png)
+### 1. Dashboard overview and KPI metrics
 
-The screenshot is a visual reference only; all numbers shown in the interface are calculated from the configured workbook at runtime.
+The header and hero area feature real-time two-way synchronization status, a manual sync trigger, light/dark theme toggle, and 5 key KPI metric cards summarizing total companies, active recruitment windows, impending deadlines, and application statuses.
+
+![Dashboard overview and KPI metric cards](./docs/screenshots/01-dashboard-overview.png)
+
+### 2. Searchable company directory
+
+Interactive directory table featuring real-time search (`Ctrl+K`), custom column visibility toggles, sortable headers, tech stack tags, announcement badges, inline user-application status dropdowns, and pagination.
+
+![Searchable company directory and data table](./docs/screenshots/02-company-directory.png)
+
+### 3. Multi-criteria advanced filtering
+
+Comprehensive filter popover supporting simultaneous filtering across announcement statuses, personal application statuses, tech focus areas, program types (Summer, Co-op, Internship), evidence ratings (A/B/C), work arrangements (On-site, Hybrid, Remote), and deadline ranges.
+
+![Advanced filter controls](./docs/screenshots/03-advanced-filters.png)
+
+### 4. Company record and tracking editor
+
+Detailed modal dialog for adding and editing company records. Validates inputs with Zod, manages technical record keys, updates private notes, and automatically triggers workbook backups before writes.
+
+![Company detail and editor modal](./docs/screenshots/04-company-editor.png)
+
+### 5. Visual analytics and role distribution
+
+Visual charts displaying the distribution of company announcement statuses (donut chart) and the most prevalent tech roles across all recorded companies (horizontal bar chart).
+
+![Visual analytics charts](./docs/screenshots/05-analytics-charts.png)
+
+### 6. Impending deadline tracking
+
+Priority deadline panel showing upcoming application closing dates within the next 30 days, complete with countdown indicators and quick-navigation links to company details.
+
+![Impending application deadlines panel](./docs/screenshots/06-deadline-tracker.png)
 
 ## Excel workbook contract
 
