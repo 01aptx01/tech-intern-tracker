@@ -1,5 +1,5 @@
 'use client';
-import { Check, Filter, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Check, Filter, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   announcementStatuses,
@@ -148,72 +148,102 @@ export function CompanyToolbar({
             ตัวกรอง{activeCount > 0 && <span>{activeCount}</span>}
           </summary>
           <div className={`filter-popover${openUpward ? ' open-up' : ''}`}>
-            <FilterGroup
-              title="สถานะประกาศ"
-              values={announcementStatuses}
-              selected={filters.announcementStatuses}
-              onToggle={(value) => toggle('announcementStatuses', value)}
-            />
-            <FilterGroup
-              title="สถานะของคุณ"
-              values={userStatusValues}
-              selected={filters.userStatuses}
-              onToggle={(value) => toggle('userStatuses', value)}
-            />
-            <FilterGroup
-              title="สาย Tech"
-              values={options.techRoles}
-              selected={filters.techRoles}
-              onToggle={(value) => toggle('techRoles', value)}
-            />
-            <FilterGroup
-              title="ประเภทโปรแกรม"
-              values={options.programTypes}
-              selected={filters.programTypes}
-              onToggle={(value) => toggle('programTypes', value)}
-            />
-            <FilterGroup
-              title="ระดับหลักฐาน"
-              values={evidenceLevels}
-              selected={filters.evidenceLevels}
-              onToggle={(value) => toggle('evidenceLevels', value)}
-            />
-            <FilterGroup
-              title="ที่ตั้ง"
-              values={options.locations}
-              selected={filters.locations}
-              onToggle={(value) => toggle('locations', value)}
-            />
-            <FilterGroup
-              title="รูปแบบทำงาน"
-              values={options.workModes}
-              selected={filters.workModes}
-              onToggle={(value) => toggle('workModes', value)}
-            />
-            <label className="filter-select">
-              <span>Deadline</span>
-              <select
-                value={filters.deadline}
-                onChange={(event) =>
-                  onFilters({
-                    ...filters,
-                    deadline: event.target.value as DeadlineFilter,
-                  })
-                }
-              >
-                <option value="all">ทั้งหมด</option>
-                <option value="14">ภายใน 14 วัน</option>
-                <option value="30">ภายใน 30 วัน</option>
-                <option value="overdue">เลยกำหนด</option>
-                <option value="none">ไม่มี deadline</option>
-              </select>
-            </label>
-            {activeCount > 0 && (
-              <button className="clear-filter" onClick={clear}>
-                <X size={15} />
-                ล้างตัวกรอง
-              </button>
-            )}
+            <div className="filter-popover-header">
+              <div className="filter-popover-title">
+                <SlidersHorizontal size={15} className="filter-title-icon" aria-hidden="true" />
+                <span>ตัวกรองการค้นหา</span>
+                {activeCount > 0 && (
+                  <span className="filter-header-badge">{activeCount}</span>
+                )}
+              </div>
+              {activeCount > 0 && (
+                <button type="button" className="filter-reset-header-btn" onClick={clear}>
+                  <RotateCcw size={13} aria-hidden="true" />
+                  <span>ล้างตัวกรอง</span>
+                </button>
+              )}
+            </div>
+
+            <div className="filter-popover-cols">
+              <div className="filter-col">
+                <FilterGroup
+                  title="สถานะประกาศ"
+                  values={announcementStatuses}
+                  selected={filters.announcementStatuses}
+                  onToggle={(value) => toggle('announcementStatuses', value)}
+                  searchable={false}
+                />
+                <FilterGroup
+                  title="สาย Tech"
+                  values={options.techRoles}
+                  selected={filters.techRoles}
+                  onToggle={(value) => toggle('techRoles', value)}
+                  searchable={true}
+                  scrollable={true}
+                />
+                <FilterGroup
+                  title="ประเภทโปรแกรม"
+                  values={options.programTypes}
+                  selected={filters.programTypes}
+                  onToggle={(value) => toggle('programTypes', value)}
+                  searchable={false}
+                />
+                <FilterGroup
+                  title="ระดับหลักฐาน"
+                  values={evidenceLevels}
+                  selected={filters.evidenceLevels}
+                  onToggle={(value) => toggle('evidenceLevels', value)}
+                  compact
+                  searchable={false}
+                />
+              </div>
+
+              <div className="filter-col">
+                <FilterGroup
+                  title="สถานะของคุณ"
+                  values={userStatusValues}
+                  selected={filters.userStatuses}
+                  onToggle={(value) => toggle('userStatuses', value)}
+                  searchable={false}
+                />
+                <FilterGroup
+                  title="ที่ตั้ง"
+                  values={options.locations}
+                  selected={filters.locations}
+                  onToggle={(value) => toggle('locations', value)}
+                  searchable={true}
+                  scrollable={true}
+                />
+                <FilterGroup
+                  title="รูปแบบทำงาน"
+                  values={options.workModes}
+                  selected={filters.workModes}
+                  onToggle={(value) => toggle('workModes', value)}
+                  searchable={true}
+                  scrollable={true}
+                />
+                <div className="filter-select-wrapper">
+                  <label className="filter-select">
+                    <span className="filter-select-label">Deadline</span>
+                    <select
+                      value={filters.deadline}
+                      onChange={(event) =>
+                        onFilters({
+                          ...filters,
+                          deadline: event.target.value as DeadlineFilter,
+                        })
+                      }
+                    >
+                      <option value="all">ทั้งหมด</option>
+                      <option value="14">ภายใน 14 วัน</option>
+                      <option value="30">ภายใน 30 วัน</option>
+                      <option value="overdue">เลยกำหนด</option>
+                      <option value="none">ไม่มี deadline</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
         </details>
         <button className="mobile-filter-button" aria-label="เปิดตัวกรอง">
@@ -236,14 +266,21 @@ function FilterGroup({
   values,
   selected,
   onToggle,
+  searchable,
+  compact = false,
+  scrollable,
 }: {
   title: string;
   values: readonly string[];
   selected: readonly string[];
   onToggle: (value: string) => void;
+  searchable?: boolean;
+  compact?: boolean;
+  scrollable?: boolean;
 }) {
   const [filterText, setFilterText] = useState('');
-  const hasSearch = values.length > 8;
+  const hasSearch = searchable !== undefined ? searchable : values.length > 15;
+  const isScrollable = scrollable !== undefined ? scrollable : hasSearch;
 
   const filteredValues = useMemo(() => {
     if (!filterText.trim()) return values;
@@ -255,7 +292,7 @@ function FilterGroup({
     if (filterText.trim()) {
       return filteredValues.slice(0, 40);
     }
-    if (values.length > 12) {
+    if (hasSearch && values.length > 12) {
       const selectedSet = new Set(selected);
       const selectedItems = values.filter((v) => selectedSet.has(v));
       const unselectedItems = values.filter((v) => !selectedSet.has(v));
@@ -265,12 +302,16 @@ function FilterGroup({
       ];
     }
     return values;
-  }, [values, filteredValues, filterText, selected]);
+  }, [values, filteredValues, filterText, hasSearch, selected]);
 
   if (!values.length) return null;
 
   return (
-    <fieldset className="filter-group">
+    <fieldset
+      className={`filter-group${compact ? ' filter-group-compact' : ''}${
+        isScrollable ? ' filter-group-scrollable' : ''
+      }`}
+    >
       <div className="filter-group-header">
         <legend>{title}</legend>
         {selected.length > 0 && (
